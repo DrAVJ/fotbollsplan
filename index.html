@@ -43,12 +43,23 @@
       font-size: 0.8rem;
     }
 
-    .controls-row3 {
+    .palette {
       display: flex;
-      align-items: center;
-      gap: 8px;
       flex-wrap: wrap;
+      gap: 8px;
       font-size: 0.8rem;
+      align-items: center;
+    }
+
+    .palette-label {
+      margin-right: 4px;
+    }
+
+    .palette-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
     }
 
     input[type="checkbox"] {
@@ -71,25 +82,6 @@
       transform: scale(0.97);
     }
 
-    .palette {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      font-size: 0.8rem;
-      align-items: center;
-    }
-
-    .palette-label {
-      margin-right: 4px;
-    }
-
-    .palette-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-    }
-
     .pitch-wrapper {
       position: relative;
       -webkit-user-select: none;
@@ -102,8 +94,6 @@
     .pitch {
       position: relative;
       width: 100%;
-      height: 80vh; /* större default */
-      max-height: 100%;
       background: #1f7a3c;
       border-radius: 12px;
       border: 2px solid #fff;
@@ -337,6 +327,7 @@
       <button id="moveMidlineBtn">Flytta mittlinje</button>
       <button id="circleMinus">- cirkel</button>
       <button id="circlePlus">+ cirkel</button>
+      <button id="recordToggleBtn">Inspelning av spelare</button>
       <button id="playAllBtn">Spela upp</button>
       <button id="stopPlayBtn">Stoppa</button>
     </div>
@@ -393,6 +384,7 @@
     const circlePlusBtn = document.getElementById("circlePlus");
     const playAllBtn = document.getElementById("playAllBtn");
     const stopPlayBtn = document.getElementById("stopPlayBtn");
+    const recordToggleBtn = document.getElementById("recordToggleBtn");
 
     const playerBlueSource = document.getElementById("playerBlueSource");
     const playerRedSource = document.getElementById("playerRedSource");
@@ -426,11 +418,6 @@
     let recordingSequence = null;
     let recordingActorId = null;
     let recordingStartTime = 0;
-    let longPressTimer = null;
-    let longPressThreshold = 500;
-    let pointerDownTime = 0;
-    let pointerMovedTooMuch = false;
-    let pointerDownPos = null;
 
     // Boll-ägande och trail
     let ballOwnerId = null;
@@ -445,6 +432,22 @@
     let isPlaying = false;
     let playbackStartTime = 0;
     let playbackRequestId = null;
+
+    // Inspelningsläge
+    let recordMode = false;
+
+    function fitPitchHeight() {
+      const wrapperRect = document.querySelector(".wrapper").getBoundingClientRect();
+      const controlsRect = document.querySelector(".controls-row2").getBoundingClientRect();
+      const paletteRect = document.querySelector(".palette").getBoundingClientRect();
+      const top = wrapperRect.top + controlsRect.height + paletteRect.height + 24;
+      const available = window.innerHeight - top - 24;
+      const minHeight = 200;
+      const maxHeight = available;
+      let current = pitch.getBoundingClientRect().height || available;
+      current = Math.max(minHeight, Math.min(maxHeight, current));
+      pitch.style.height = current + "px";
+    }
 
     function pushUndoState() {
       const snapshot = JSON.parse(JSON.stringify({
@@ -646,49 +649,39 @@
         lastDirY: -1
       };
 
-      pointerDownTime = performance.now();
-      pointerMovedTooMuch = false;
-      pointerDownPos = { x: e.clientX, y: e.clientY };
-      longPressTimer = setTimeout(() => {
-        startRecordingForActor(id, target, pitchRect, e);
-      }, longPressThreshold);
+      if (recordMode) {
+        recordingActorId = id;
+        recordingStartTime = performance.now();
+        const seqId = "SEQ" + (drillSequences.length + 1);
+        recordingSequence = {
+          id: seqId,
+          actorId: id,
+          kind: "run",
+          startAt: 0,
+          points: [],
+          svgId: seqId
+        };
+        drillSequences.push(recordingSequence);
+        target.classList.add("recording");
+
+        const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+        polyline.setAttribute("id", seqId);
+        polyline.setAttribute("class", "run-path");
+        polyline.setAttribute("points", "");
+        overlaySvg.appendChild(polyline);
+
+        addRecordingPoint(centerX, centerY);
+      } else {
+        recordingSequence = null;
+        recordingActorId = null;
+      }
 
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", onPointerUp);
     }
 
-    function cancelLongPressTimer() {
-      if (longPressTimer) {
-        clearTimeout(longPressTimer);
-        longPressTimer = null;
-      }
-    }
-
-    function startRecordingForActor(actorId, el, pitchRect, e) {
-      recordingActorId = actorId;
-      recordingStartTime = performance.now();
-      const seqId = "SEQ" + (drillSequences.length + 1);
-      const kind = "run";
-      recordingSequence = {
-        id: seqId,
-        actorId,
-        kind,
-        startAt: 0,
-        points: [],
-        svgId: seqId
-      };
-      drillSequences.push(recordingSequence);
-      el.classList.add("recording");
-
-      const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-      polyline.setAttribute("id", seqId);
-      polyline.setAttribute("class", "run-path");
-      polyline.setAttribute("points", "");
-      overlaySvg.appendChild(polyline);
-
-      const x = e.clientX - pitchRect.left;
-      const y = e.clientY - pitchRect.top;
-      addRecordingPoint(x, y);
+    function startRecordingForActor() {
+      // ej använd längre (vi kör explicit recordMode)
     }
 
     function addRecordingPoint(x, y) {
@@ -1019,11 +1012,6 @@
     function onPointerMove(e) {
       if (!dragInfo) return;
 
-      const moveDist = pointerDownPos
-        ? Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y)
-        : 0;
-      if (moveDist > 10) pointerMovedTooMuch = true;
-
       if (dragInfo.type === "player") {
         const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
 
@@ -1095,8 +1083,6 @@
           addRecordingPoint(x, y);
         }
 
-        if (pointerMovedTooMuch) cancelLongPressTimer();
-
       } else if (dragInfo.type === "goal") {
         const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
 
@@ -1158,9 +1144,8 @@
         const dy = e.clientY - startY;
         let newHeight = startHeight + dy;
 
-        const rect = pitch.getBoundingClientRect();
-        const minHeight = rect.width * 0.4;
-        const maxHeight = window.innerHeight - 80;
+        const minHeight = 200;
+        const maxHeight = window.innerHeight - 150;
 
         newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
         pitch.style.height = newHeight + "px";
@@ -1175,7 +1160,7 @@
         const newRel = Math.max(0, Math.min(1, startRel + dy / pitchRect.height));
         midlineYRel = newRel;
         renderMidline();
-        renderCenterCircle(); // cirkeln följer mittlinjen
+        renderCenterCircle();
       }
     }
 
@@ -1187,7 +1172,6 @@
         el.classList.remove("dragging");
         el.releasePointerCapture(e.pointerId);
 
-        cancelLongPressTimer();
         stopRecording();
 
         resolveOverlapsForPlayer(id, pitchRect);
@@ -1389,7 +1373,7 @@
       const rect = pitch.getBoundingClientRect();
       const r = rect.width * centerCircleRadiusRel;
       const cx = rect.width / 2;
-      const cy = rect.height * midlineYRel; // följer mittlinjen
+      const cy = rect.height * midlineYRel;
       centerCircleEl.style.width = (2 * r) + "px";
       centerCircleEl.style.height = (2 * r) + "px";
       centerCircleEl.style.left = (cx - r) + "px";
@@ -1449,13 +1433,17 @@
       if (!drillSequences.length) return;
       isPlaying = true;
       playbackStartTime = performance.now();
-      cancelLongPressTimer();
       playbackLoop();
     });
 
     stopPlayBtn.addEventListener("click", () => {
       isPlaying = false;
       if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
+    });
+
+    recordToggleBtn.addEventListener("click", () => {
+      recordMode = !recordMode;
+      recordToggleBtn.classList.toggle("selected", recordMode);
     });
 
     // UI-kontroller
@@ -1522,6 +1510,7 @@
 
     window.addEventListener("load", () => {
       setTimeout(() => {
+        fitPitchHeight();
         updateRatioDisplay();
         applyLinesClass();
         renderMidline();
@@ -1530,6 +1519,7 @@
     });
 
     window.addEventListener("resize", () => {
+      fitPitchHeight();
       updateRatioDisplay();
       renderGoals();
       renderCones();
