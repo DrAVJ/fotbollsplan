@@ -295,12 +295,10 @@
       pointer-events: auto;
     }
 
-    /* vald ikon – guldig aura */
     .selected {
       box-shadow: 0 0 0 2px #ffd54f, 0 0 8px #ffeb3b;
     }
 
-    /* SVG overlay för banor */
     .overlay-svg {
       position: absolute;
       inset: 0;
@@ -654,7 +652,7 @@
         prevX: centerX,
         prevY: centerY,
         lastDirX: 0,
-        lastDirY: -1 // default "framåt" uppåt
+        lastDirY: -1 // default
       };
 
       pointerDownTime = performance.now();
@@ -828,7 +826,7 @@
       clearSelectionHighlight();
       e.currentTarget.classList.add("selected");
 
-      // Ta över kontrollen: bollen blir fri
+      // Bollen blir fri direkt
       ballOwnerId = null;
 
       const pitchRect = pitch.getBoundingClientRect();
@@ -944,13 +942,11 @@
       const xRel = x / pitchRect.width;
       const yRel = y / pitchRect.height;
       const last = ballTrailPoints[ballTrailPoints.length - 1];
-      const pitchX = x;
-      const pitchY = y;
       if (last) {
         const lastX = last.xRel * pitchRect.width;
         const lastY = last.yRel * pitchRect.height;
-        const dist = Math.hypot(pitchX - lastX, pitchY - lastY);
-        if (dist < 3) return; // filtrera små rörelser
+        const dist = Math.hypot(x - lastX, y - lastY);
+        if (dist < 3) return;
       }
       ballTrailPoints.push({ xRel, yRel });
       renderBallTrail();
@@ -1006,13 +1002,21 @@
           pState.yRel = y / pitchRect.height;
         }
 
-        // uppdatera riktning
+        // 360° riktning med lite smoothing
         let dirX = dragInfo.lastDirX;
         let dirY = dragInfo.lastDirY;
         const len = Math.hypot(dx, dy);
-        if (len > 0.5) {
-          dirX = dx / len;
-          dirY = dy / len;
+        if (len > 0.1) {
+          const newX = dx / len;
+          const newY = dy / len;
+          const alpha = 0.3; // smoothing
+          dirX = dirX * (1 - alpha) + newX * alpha;
+          dirY = dirY * (1 - alpha) + newY * alpha;
+          const dlen = Math.hypot(dirX, dirY);
+          if (dlen > 0) {
+            dirX /= dlen;
+            dirY /= dlen;
+          }
           dragInfo.lastDirX = dirX;
           dragInfo.lastDirY = dirY;
         }
@@ -1022,22 +1026,22 @@
           const ballEl = pitch.querySelector(".ball");
           if (ballEl) {
             const offset = PLAYER_RADIUS + BALL_RADIUS;
-            const ballX = x + dirX * offset;
-            const ballY = y + dirY * offset;
+            let ballX = x + dirX * offset;
+            let ballY = y + dirY * offset;
 
-            const clampedX = Math.max(BALL_RADIUS, Math.min(pitchRect.width - BALL_RADIUS, ballX));
-            const clampedY = Math.max(BALL_RADIUS, Math.min(pitchRect.height - BALL_RADIUS, ballY));
+            ballX = Math.max(BALL_RADIUS, Math.min(pitchRect.width - BALL_RADIUS, ballX));
+            ballY = Math.max(BALL_RADIUS, Math.min(pitchRect.height - BALL_RADIUS, ballY));
 
-            ballEl.style.left = (clampedX - BALL_RADIUS) + "px";
-            ballEl.style.top = (clampedY - BALL_RADIUS) + "px";
+            ballEl.style.left = (ballX - BALL_RADIUS) + "px";
+            ballEl.style.top = (ballY - BALL_RADIUS) + "px";
 
             const bState = ballsState[0];
             if (bState) {
-              bState.xRel = clampedX / pitchRect.width;
-              bState.yRel = clampedY / pitchRect.height;
+              bState.xRel = ballX / pitchRect.width;
+              bState.yRel = ballY / pitchRect.height;
             }
 
-            addBallTrailPoint(clampedX, clampedY);
+            addBallTrailPoint(ballX, ballY);
           }
         }
 
@@ -1135,40 +1139,38 @@
 
         resolveOverlapsForPlayer(id, pitchRect);
 
-        // Kolla om spelaren nu har bollen (överlappar)
+        // Kolla om spelaren nu tar bollen
         const ballEl = pitch.querySelector(".ball");
         if (ballEl) {
           const ballRect = ballEl.getBoundingClientRect();
           const playerRect = el.getBoundingClientRect();
-          const pitchRect = pitch.getBoundingClientRect();
+          const pRect = pitch.getBoundingClientRect();
 
-          const px = playerRect.left - pitchRect.left + PLAYER_RADIUS;
-          const py = playerRect.top - pitchRect.top + PLAYER_RADIUS;
-          const bx = ballRect.left - pitchRect.left + BALL_RADIUS;
-          const by = ballRect.top - pitchRect.top + BALL_RADIUS;
+          const px = playerRect.left - pRect.left + PLAYER_RADIUS;
+          const py = playerRect.top - pRect.top + PLAYER_RADIUS;
+          const bx = ballRect.left - pRect.left + BALL_RADIUS;
+          const by = ballRect.top - pRect.top + BALL_RADIUS;
 
           const dist = Math.hypot(px - bx, py - by);
           if (dist < PLAYER_RADIUS + BALL_RADIUS + 2) {
-            // Spelaren tar bollen
             ballOwnerId = id;
 
-            // placera bollen kant-i-kant framför i senaste riktning
             const dirX = dragInfo.lastDirX || 0;
             const dirY = dragInfo.lastDirY || -1;
             const offset = PLAYER_RADIUS + BALL_RADIUS;
             let ballX = px + dirX * offset;
             let ballY = py + dirY * offset;
 
-            ballX = Math.max(BALL_RADIUS, Math.min(pitchRect.width - BALL_RADIUS, ballX));
-            ballY = Math.max(BALL_RADIUS, Math.min(pitchRect.height - BALL_RADIUS, ballY));
+            ballX = Math.max(BALL_RADIUS, Math.min(pRect.width - BALL_RADIUS, ballX));
+            ballY = Math.max(BALL_RADIUS, Math.min(pRect.height - BALL_RADIUS, ballY));
 
             ballEl.style.left = (ballX - BALL_RADIUS) + "px";
             ballEl.style.top = (ballY - BALL_RADIUS) + "px";
 
             const bState = ballsState[0];
             if (bState) {
-              bState.xRel = ballX / pitchRect.width;
-              bState.yRel = ballY / pitchRect.height;
+              bState.xRel = ballX / pRect.width;
+              bState.yRel = ballY / pRect.height;
             }
 
             addBallTrailPoint(ballX, ballY);
