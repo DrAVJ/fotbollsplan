@@ -361,16 +361,29 @@
       </div>
     </div>
 
-    <div class="pitch-wrapper">
-      <div id="pitch" class="pitch show-lines"></div>
-      <div id="midline"></div>
-      <div id="centerCircle"></div>
-      <svg id="overlaySvg" class="overlay-svg"></svg>
-      <div id="stepControls" style="position:absolute; right:8px; top:8px; display:none; font-size:0.75rem; gap:4px; align-items:center;">
-  <button id="stepMinusBtn">-</button>
-  <span id="stepLabel">Steg 1</span>
-  <button id="stepPlusBtn">+</button>
+    <div style="display:flex; gap:12px;">
+  <div class="pitch-wrapper" style="flex:1;">
+    <div id="pitch" class="pitch show-lines"></div>
+    <div id="midline"></div>
+    <div id="centerCircle"></div>
+    <svg id="overlaySvg" class="overlay-svg"></svg>
+
+    <div id="stepControls" style="position:absolute; right:8px; top:8px; display:none; font-size:0.75rem; gap:4px; align-items:center;">
+      <button id="stepMinusBtn">-</button>
+      <span id="stepLabel">Steg 1</span>
+      <button id="stepPlusBtn">+</button>
+    </div>
+
+    <div id="resizeHandle" class="pitch-resize-handle">Dra för längd</div>
+  </div>
+
+  <!-- Lista med inspelningar till höger -->
+  <div id="recList" style="width:140px; font-size:0.75rem;">
+    <strong>Rörelser</strong>
+    <!-- rader renderas via JS -->
+  </div>
 </div>
+
 
       <div id="resizeHandle" class="pitch-resize-handle">Dra för längd</div>
     </div>
@@ -402,7 +415,8 @@
     const stepMinusBtn  = document.getElementById("stepMinusBtn");
     const stepPlusBtn   = document.getElementById("stepPlusBtn");
     const stepLabel     = document.getElementById("stepLabel");
-    
+    const recList = document.getElementById("recList");
+
     
 
 
@@ -1083,6 +1097,49 @@
       });
     }
 
+    function renderRecList() {
+  if (!recList) return;
+  // behåll första child (rubriken), ta bort resten
+  while (recList.children.length > 1) {
+    recList.removeChild(recList.lastChild);
+  }
+
+  recordings.forEach((rec, index) => {
+    const row = document.createElement("div");
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.gap = "4px";
+    row.style.marginTop = "4px";
+
+    const label = document.createElement("span");
+    label.textContent = "REC" + (index + 1);
+    label.style.minWidth = "40px";
+
+    const input = document.createElement("input");
+    input.type = "number";
+    input.min = "1";
+    input.value = rec.step ?? (index + 1); // default: 1,2,3,...
+    input.style.width = "40px";
+
+    input.addEventListener("change", () => {
+      const v = parseInt(input.value, 10);
+      rec.step = isNaN(v) || v < 1 ? 1 : v;
+      input.value = rec.step;
+    });
+
+    // säkerställ att rec.step alltid har ett värde
+    if (!("step" in rec) || rec.step == null) {
+      rec.step = index + 1;
+      input.value = rec.step;
+    }
+
+    row.appendChild(label);
+    row.appendChild(input);
+    recList.appendChild(row);
+  });
+}
+
+
     function onPointerMove(e) {
       if (!dragInfo) return;
 
@@ -1254,12 +1311,13 @@
           pressTimer = null;
         }
 
-        // om en REC skapats för denna spelare: avsluta den
         if (currentRecording && currentRecording.actorId === id) {
-          recordings.push(currentRecording);
-          currentRecording = null;
-          console.log("Recordings:", recordings);
-        }
+  recordings.push(currentRecording);
+  currentRecording = null;
+  console.log("Recordings:", recordings);
+  renderRecList();
+}
+
 
         pressRecordingReady = false;
         pressActorId = null;
@@ -1601,6 +1659,7 @@ function playbackLoop() {
 
     if (currentRecording) {
       recordings.push(currentRecording);
+      renderRecList();
       currentRecording = null;
       console.log("Recordings:", recordings);
     }
