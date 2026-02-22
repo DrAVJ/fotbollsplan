@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Träningsplan – mål + spelare</title>
+  <title>Träningsplan – mål + spelare + konor</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -220,6 +220,38 @@
       opacity: 0.8;
     }
 
+    .cone-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #ff9800;
+      box-shadow: 0 0 0 2px #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #111;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      pointer-events: auto;
+      margin-left: 8px;
+    }
+
+    .cone {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ff9800;
+      box-shadow: 0 0 0 2px #fff;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      pointer-events: auto;
+    }
+
     pre {
       margin-top: 16px;
       font-size: 0.75rem;
@@ -233,7 +265,7 @@
 </head>
 <body>
   <div class="wrapper">
-    <h1>Två lag – dragbar plan, mål & spelare</h1>
+    <h1>Två lag – dragbar plan, mål, spelare & konor</h1>
 
     <div class="controls">
       <label for="blueCount">Blå:</label>
@@ -256,6 +288,10 @@
       <span>Mål:</span>
       <button id="addGoalBtn">Lägg till mål (max 4)</button>
       <button id="clearGoalsBtn">Ta bort alla mål</button>
+      <span style="margin-left:12px;">Konor:</span>
+      <div id="coneSource" class="cone-icon">K</div>
+      <button id="clearConesBtn">Ta bort alla konor</button>
+      <button id="undoBtn">Ångra</button>
     </div>
 
     <div class="pitch-wrapper">
@@ -278,15 +314,68 @@
     const ratioDisplay = document.getElementById("ratioDisplay");
     const addGoalBtn = document.getElementById("addGoalBtn");
     const clearGoalsBtn = document.getElementById("clearGoalsBtn");
+    const coneSource = document.getElementById("coneSource");
+    const clearConesBtn = document.getElementById("clearConesBtn");
+    const undoBtn = document.getElementById("undoBtn");
 
     let playersState = [];
     let goalsState = []; // { id, xRel, yRel, rotationDeg }
+    let conesState = []; // { id, xRel, yRel }
+    let coneCounter = 0;
     let dragInfo = null;
 
     const PLAYER_RADIUS = 16;
     const MIN_DIST = PLAYER_RADIUS * 2 * 1.1;
     const MAX_RELAX_STEPS = 20;
     const MAX_GOALS = 4;
+
+    // Undo-stack
+    let undoStack = [];
+    const UNDO_LIMIT = 10;
+
+    function pushUndoState() {
+      const snapshot = JSON.parse(JSON.stringify({
+        playersState,
+        goalsState,
+        conesState
+      }));
+      undoStack.push(snapshot);
+      if (undoStack.length > UNDO_LIMIT) {
+        undoStack.shift();
+      }
+    }
+
+    function restoreStateFromSnapshot(snapshot) {
+      playersState = JSON.parse(JSON.stringify(snapshot.playersState));
+      goalsState = JSON.parse(JSON.stringify(snapshot.goalsState));
+      conesState = JSON.parse(JSON.stringify(snapshot.conesState));
+
+      // Rensa DOM
+      [...pitch.querySelectorAll(".player")].forEach(el => el.remove());
+      [...pitch.querySelectorAll(".goal")].forEach(el => el.remove());
+      [...pitch.querySelectorAll(".cone")].forEach(el => el.remove());
+
+      // Återställ spelare
+      const pitchRect = pitch.getBoundingClientRect();
+      for (const p of playersState) {
+        const el = document.createElement("div");
+        el.className = "player " + p.team;
+        el.dataset.id = p.id;
+        el.dataset.team = p.team;
+        el.textContent = p.id.startsWith("B") ? p.id.slice(1) : p.id.slice(1);
+        const x = p.xRel * pitchRect.width;
+        const y = p.yRel * pitchRect.height;
+        el.style.left = (x - PLAYER_RADIUS) + "px";
+        el.style.top = (y - PLAYER_RADIUS) + "px";
+        pitch.appendChild(el);
+        setupPlayerDrag(el);
+      }
+
+      // Återställ mål + konor
+      renderGoals();
+      renderCones();
+      renderState();
+    }
 
     function initPitchHeight() {
       const rect = pitch.getBoundingClientRect();
@@ -312,7 +401,7 @@
     }
 
     function createPlayers() {
-      // rensa spelare men inte mål
+      // rensa spelare men inte mål/konor
       [...pitch.querySelectorAll(".player")].forEach(el => el.remove());
       playersState = [];
 
@@ -324,11 +413,16 @@
 
       const placed = [];
 
-      // ta hänsyn till befintliga mål som hinder för startplacering
+      // ta hänsyn till befintliga mål och konor
       for (const g of goalsState) {
         const gx = g.xRel * pitchRect.width;
         const gy = g.yRel * pitchRect.height;
         placed.push({ x: gx, y: gy });
+      }
+      for (const c of conesState) {
+        const cx = c.xRel * pitchRect.width;
+        const cy = c.yRel * pitchRect.height;
+        placed.push({ x: cx, y: cy });
       }
 
       for (let i = 1; i <= blueCount; i++) {
@@ -474,6 +568,7 @@
       const rotateBtn = el.querySelector(".goal-rotate");
       rotateBtn.addEventListener("click", (e) => {
         e.stopPropagation();
+        pushUndoState();
         const id = el.dataset.id;
         const gState = goalsState.find(g => g.id === id);
         if (!gState) return;
@@ -481,6 +576,82 @@
         el.style.transform = `translate(-50%, -50%) rotate(${gState.rotationDeg}deg)`;
         renderState();
       });
+    }
+
+    function setupConeDrag(el) {
+      el.addEventListener("pointerdown", onPointerDownCone);
+    }
+
+    function onPointerDownCone(e) {
+      const pitchRect = pitch.getBoundingClientRect();
+      const source = e.currentTarget;
+
+      // Klick på käll-ikonen: skapa ny kona
+      if (source.id === "coneSource") {
+        pushUndoState();
+        coneCounter++;
+        const id = "C" + coneCounter;
+        const coneEl = document.createElement("div");
+        coneEl.className = "cone";
+        coneEl.dataset.id = id;
+
+        let x = e.clientX - pitchRect.left;
+        let y = e.clientY - pitchRect.top;
+        x = Math.max(0, Math.min(pitchRect.width, x));
+        y = Math.max(0, Math.min(pitchRect.height, y));
+
+        pitch.appendChild(coneEl);
+        // efter append får vi korrekta offsetWidth/height
+        const halfW = coneEl.offsetWidth / 2;
+        const halfH = coneEl.offsetHeight / 2;
+        coneEl.style.left = (x - halfW) + "px";
+        coneEl.style.top = (y - halfH) + "px";
+
+        const xRel = x / pitchRect.width;
+        const yRel = y / pitchRect.height;
+        conesState.push({ id, xRel, yRel });
+
+        setupConeDrag(coneEl);
+        coneEl.addEventListener("dblclick", onConeDblClick);
+
+        startConeDrag(e, coneEl, id, pitchRect);
+      } else {
+        // dra befintlig kona
+        const id = source.dataset.id;
+        startConeDrag(e, source, id, pitchRect);
+      }
+    }
+
+    function startConeDrag(e, el, id, pitchRect) {
+      e.stopPropagation();
+      el.setPointerCapture(e.pointerId);
+      el.classList.add("dragging");
+
+      const rect = el.getBoundingClientRect();
+
+      dragInfo = {
+        type: "cone",
+        id,
+        el,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        pitchRect
+      };
+
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    }
+
+    function onConeDblClick(e) {
+      e.stopPropagation();
+      const el = e.currentTarget;
+      const id = el.dataset.id;
+      const idx = conesState.findIndex(c => c.id === id);
+      if (idx === -1) return;
+      pushUndoState();
+      conesState.splice(idx, 1);
+      el.remove();
+      renderState();
     }
 
     function onPointerMove(e) {
@@ -520,6 +691,23 @@
           gState.xRel = x / pitchRect.width;
           gState.yRel = y / pitchRect.height;
         }
+      } else if (dragInfo.type === "cone") {
+        const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
+
+        let x = e.clientX - pitchRect.left - offsetX + el.offsetWidth / 2;
+        let y = e.clientY - pitchRect.top - offsetY + el.offsetHeight / 2;
+
+        x = Math.max(0, Math.min(pitchRect.width, x));
+        y = Math.max(0, Math.min(pitchRect.height, y));
+
+        el.style.left = (x - el.offsetWidth / 2) + "px";
+        el.style.top = (y - el.offsetHeight / 2) + "px";
+
+        const cState = conesState.find(c => c.id === id);
+        if (cState) {
+          cState.xRel = x / pitchRect.width;
+          cState.yRel = y / pitchRect.height;
+        }
       } else if (dragInfo.type === "resize") {
         const { startY, startHeight } = dragInfo;
         const dy = e.clientY - startY;
@@ -546,6 +734,9 @@
 
         resolveOverlapsForPlayer(id, pitchRect);
       } else if (dragInfo.type === "goal") {
+        dragInfo.el.classList.remove("dragging");
+        dragInfo.el.releasePointerCapture(e.pointerId);
+      } else if (dragInfo.type === "cone") {
         dragInfo.el.classList.remove("dragging");
         dragInfo.el.releasePointerCapture(e.pointerId);
       } else if (dragInfo.type === "resize") {
@@ -606,7 +797,6 @@
     }
 
     function renderGoals() {
-      // ta bort gamla mål
       [...pitch.querySelectorAll(".goal")].forEach(el => el.remove());
 
       const pitchRect = pitch.getBoundingClientRect();
@@ -638,11 +828,34 @@
       }
     }
 
+    function renderCones() {
+      [...pitch.querySelectorAll(".cone")].forEach(el => el.remove());
+      const pitchRect = pitch.getBoundingClientRect();
+
+      for (const c of conesState) {
+        const el = document.createElement("div");
+        el.className = "cone";
+        el.dataset.id = c.id;
+
+        const x = c.xRel * pitchRect.width;
+        const y = c.yRel * pitchRect.height;
+
+        const halfW = el.offsetWidth / 2 || 11;
+        const halfH = el.offsetHeight / 2 || 11;
+
+        el.style.left = (x - halfW) + "px";
+        el.style.top = (y - halfH) + "px";
+
+        pitch.appendChild(el);
+        setupConeDrag(el);
+        el.addEventListener("dblclick", onConeDblClick);
+      }
+    }
+
     function addGoal() {
       if (goalsState.length >= MAX_GOALS) return;
+      pushUndoState();
 
-      const pitchRect = pitch.getBoundingClientRect();
-      // default position: mitten av nedre kortsidan, liggande
       const xRel = 0.5;
       const yRel = 0.95;
       const id = "G" + (goalsState.length + 1);
@@ -659,15 +872,26 @@
     }
 
     function clearGoals() {
+      if (!goalsState.length) return;
+      pushUndoState();
       goalsState = [];
       renderGoals();
+      renderState();
+    }
+
+    function clearCones() {
+      if (!conesState.length) return;
+      pushUndoState();
+      conesState = [];
+      renderCones();
       renderState();
     }
 
     function renderState() {
       const fullState = {
         players: playersState,
-        goals: goalsState
+        goals: goalsState,
+        cones: conesState
       };
       stateOutput.textContent = JSON.stringify(fullState, null, 2);
     }
@@ -685,15 +909,27 @@
     });
 
     generateBtn.addEventListener("click", () => {
+      pushUndoState();
       createPlayers();
       renderGoals();
+      renderCones();
     });
+
     logStateBtn.addEventListener("click", renderState);
     showLinesCheckbox.addEventListener("change", () => {
       applyLinesClass();
     });
     addGoalBtn.addEventListener("click", addGoal);
     clearGoalsBtn.addEventListener("click", clearGoals);
+    clearConesBtn.addEventListener("click", clearCones);
+
+    undoBtn.addEventListener("click", () => {
+      if (!undoStack.length) return;
+      const snapshot = undoStack.pop();
+      restoreStateFromSnapshot(snapshot);
+    });
+
+    setupConeDrag(coneSource);
 
     window.addEventListener("load", () => {
       setTimeout(() => {
@@ -701,6 +937,7 @@
         applyLinesClass();
         createPlayers();
         renderGoals();
+        renderCones();
       }, 100);
     });
 
@@ -710,7 +947,8 @@
       const newHeight = rect.width / currentRatio;
       pitch.style.height = newHeight + "px";
       updateRatioDisplay();
-      renderGoals(); // uppdatera målpositioner visuellt
+      renderGoals();
+      renderCones();
     });
   </script>
 </body>
