@@ -366,6 +366,12 @@
       <div id="midline"></div>
       <div id="centerCircle"></div>
       <svg id="overlaySvg" class="overlay-svg"></svg>
+      <div id="stepControls" style="position:absolute; right:8px; top:8px; display:none; font-size:0.75rem; gap:4px; align-items:center;">
+  <button id="stepMinusBtn">-</button>
+  <span id="stepLabel">Steg 1</span>
+  <button id="stepPlusBtn">+</button>
+</div>
+
       <div id="resizeHandle" class="pitch-resize-handle">Dra för längd</div>
     </div>
   </div>
@@ -391,6 +397,14 @@
     const goalSource = document.getElementById("goalSource");
     const coneSource = document.getElementById("coneSource");
     const ballSource = document.getElementById("ballSource");
+
+    const stepControls  = document.getElementById("stepControls");
+    const stepMinusBtn  = document.getElementById("stepMinusBtn");
+    const stepPlusBtn   = document.getElementById("stepPlusBtn");
+    const stepLabel     = document.getElementById("stepLabel");
+    
+    
+
 
     let playersState = [];
     let goalsState = [];
@@ -440,6 +454,10 @@
     let recordings = [];          // alla inspelningar
     let currentRecording = null;  // inspelning som pågår nu
     let currentStep = 1;          // Steg 1, Steg 2, ...
+
+    function updateStepLabel() {
+      stepLabel.textContent = "Steg " + currentStep;
+    }
 
     function fitPitchHeight() {
       const wrapperRect = document.querySelector(".wrapper").getBoundingClientRect();
@@ -1403,25 +1421,32 @@
     });
 
     recordToggleBtn.addEventListener("click", () => {
-      recordMode = !recordMode;
-      recordToggleBtn.classList.toggle("selected", recordMode);
+  recordMode = !recordMode;
+  recordToggleBtn.classList.toggle("selected", recordMode);
 
-      if (recordMode) {
-        // starta ny global recording också
-        currentRecording = {
-          id: "REC" + (recordings.length + 1),
-          step: currentStep,
-          startTime: performance.now(),
-          frames: []
-        };
-      } else {
-        if (currentRecording) {
-          recordings.push(currentRecording);
-          currentRecording = null;
-          console.log("Recordings:", recordings);
-        }
-      }
-    });
+  if (recordMode) {
+    // visa steg-kontroller och starta ny inspelning
+    stepControls.style.display = "flex";
+    updateStepLabel();
+
+    currentRecording = {
+      id: "REC" + (recordings.length + 1),
+      step: currentStep,
+      startTime: performance.now(),
+      frames: []
+    };
+  } else {
+    // göm steg-kontroller och spara inspelning
+    stepControls.style.display = "none";
+
+    if (currentRecording) {
+      recordings.push(currentRecording);
+      currentRecording = null;
+      console.log("Recordings:", recordings);
+    }
+  }
+});
+
 
     // UI-kontroller
     resizeHandle.addEventListener("pointerdown", (e) => {
@@ -1506,6 +1531,17 @@
       renderMidline();
       renderCenterCircle();
     });
+
+    stepMinusBtn.addEventListener("click", () => {
+  currentStep = Math.max(1, currentStep - 1);
+  updateStepLabel();
+});
+
+stepPlusBtn.addEventListener("click", () => {
+  currentStep += 1;
+  updateStepLabel();
+});
+
   </script>
 </body>
 </html>
