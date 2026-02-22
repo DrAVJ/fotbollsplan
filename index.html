@@ -13,6 +13,13 @@
       color: #f5f5f5;
       box-sizing: border-box;
       min-height: 150vh;
+
+      /* stoppa långtryck-copy/textmarkering generellt */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
 
     h1 {
@@ -82,6 +89,9 @@
 
     .pitch-wrapper {
       position: relative;
+      /* även här: ingen textmarkering */
+      -webkit-user-select: none;
+      user-select: none;
     }
 
     .pitch {
@@ -311,6 +321,10 @@
       border-radius: 6px;
       max-height: 180px;
       overflow: auto;
+
+      /* tillåt textmarkering här */
+      -webkit-user-select: text;
+      user-select: text;
     }
   </style>
 </head>
@@ -392,7 +406,7 @@
     let undoStack = [];
     const UNDO_LIMIT = 10;
 
-    // Drill-sekvenser (för animation senare)
+    // Drill-sekvenser
     // { id, actorId, kind, startAt, points:[{t,xRel,yRel}], svgId }
     let drillSequences = [];
     let recordingSequence = null;
@@ -630,30 +644,27 @@
     }
 
     function startRecordingForActor(actorId, el, pitchRect, e) {
-      // starta bara om fingret fortfarande är nere på samma element
       recordingActorId = actorId;
       recordingStartTime = performance.now();
       const seqId = "SEQ" + (drillSequences.length + 1);
-      const kind = "run"; // senare kan vi skilja "runWithBall"
+      const kind = "run"; // senare: runWithBall/pass
       recordingSequence = {
         id: seqId,
         actorId,
         kind,
-        startAt: 0, // vi lägger tidslinje senare
+        startAt: 0,
         points: [],
         svgId: seqId
       };
       drillSequences.push(recordingSequence);
       el.classList.add("recording");
 
-      // skapa polyline i SVG
       const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
       polyline.setAttribute("id", seqId);
       polyline.setAttribute("class", "run-path");
       polyline.setAttribute("points", "");
       overlaySvg.appendChild(polyline);
 
-      // lägg första punkt
       const x = e.clientX - pitchRect.left;
       const y = e.clientY - pitchRect.top;
       addRecordingPoint(x, y);
@@ -682,7 +693,6 @@
       if (actorEl) {
         actorEl.classList.remove("recording");
       }
-      // duration kan användas senare för uppspelning
       if (recordingSequence.points.length > 0) {
         const firstT = recordingSequence.points[0].t;
         const lastT = recordingSequence.points[recordingSequence.points.length - 1].t;
@@ -907,12 +917,10 @@
           pState.yRel = y / pitchRect.height;
         }
 
-        // om vi spelar in: lägg till punkt i sekvens
         if (recordingActorId === id && recordingSequence) {
           addRecordingPoint(x, y);
         }
 
-        // om man har börjat dra mycket innan long-press går ut: avbryt long-press
         if (pointerMovedTooMuch) {
           cancelLongPressTimer();
         }
@@ -1242,6 +1250,11 @@
 
     setupConeDrag(coneSource);
     setupBallDrag(ballSource);
+
+    // blockera contextmeny (långtryck copy-menyer) på planen
+    pitch.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+    });
 
     window.addEventListener("load", () => {
       setTimeout(() => {
