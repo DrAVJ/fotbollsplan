@@ -175,6 +175,10 @@
       cursor: grabbing;
     }
 
+    .player.recording {
+      box-shadow: 0 0 0 2px #ffd54f, 0 0 8px #ffeb3b;
+    }
+
     .goal {
       position: absolute;
       width: 40px;
@@ -283,6 +287,22 @@
       pointer-events: auto;
     }
 
+    /* SVG overlay för inspelade banor */
+    .overlay-svg {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: visible;
+    }
+
+    .run-path {
+      fill: none;
+      stroke: #ffeb3b;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
     pre {
       margin-top: 16px;
       font-size: 0.75rem;
@@ -329,6 +349,8 @@
 
     <div class="pitch-wrapper">
       <div id="pitch" class="pitch show-lines"></div>
+      <!-- SVG-overlay för löpbanor -->
+      <svg id="overlaySvg" class="overlay-svg"></svg>
       <div id="resizeHandle" class="pitch-resize-handle">Dra för längd</div>
     </div>
 
@@ -351,6 +373,7 @@
     const clearConesBtn = document.getElementById("clearConesBtn");
     const ballSource = document.getElementById("ballSource");
     const undoBtn = document.getElementById("undoBtn");
+    const overlaySvg = document.getElementById("overlaySvg");
 
     let playersState = [];
     let goalsState = []; // { id, xRel, yRel, rotationDeg }
@@ -369,12 +392,25 @@
     let undoStack = [];
     const UNDO_LIMIT = 10;
 
+    // Drill-sekvenser (för animation senare)
+    // { id, actorId, kind, startAt, points:[{t,xRel,yRel}], svgId }
+    let drillSequences = [];
+    let recordingSequence = null;
+    let recordingActorId = null;
+    let recordingStartTime = 0;
+    let longPressTimer = null;
+    let longPressThreshold = 500; // ms
+    let pointerDownTime = 0;
+    let pointerMovedTooMuch = false;
+    let pointerDownPos = null;
+
     function pushUndoState() {
       const snapshot = JSON.parse(JSON.stringify({
         playersState,
         goalsState,
         conesState,
-        ballsState
+        ballsState,
+        drillSequences
       }));
       undoStack.push(snapshot);
       if (undoStack.length > UNDO_LIMIT) {
@@ -387,11 +423,13 @@
       goalsState = JSON.parse(JSON.stringify(snapshot.goalsState));
       conesState = JSON.parse(JSON.stringify(snapshot.conesState));
       ballsState = JSON.parse(JSON.stringify(snapshot.ballsState));
+      drillSequences = JSON.parse(JSON.stringify(snapshot.drillSequences));
 
       [...pitch.querySelectorAll(".player")].forEach(el => el.remove());
       [...pitch.querySelectorAll(".goal")].forEach(el => el.remove());
       [...pitch.querySelectorAll(".cone")].forEach(el => el.remove());
       [...pitch.querySelectorAll(".ball")].forEach(el => el.remove());
+      while (overlaySvg.firstChild) overlaySvg.removeChild(overlaySvg.firstChild);
 
       const pitchRect = pitch.getBoundingClientRect();
 
@@ -413,6 +451,7 @@
       renderGoals();
       renderCones();
       renderBalls();
+      renderAllSequencesPaths();
       renderState();
     }
 
@@ -451,7 +490,6 @@
 
       const placed = [];
 
-      // befintliga mål/konor/bollar som hinder initialt
       for (const g of goalsState) {
         placed.push({ x: g.xRel * pitchRect.width, y: g.yRel * pitchRect.height });
       }
@@ -568,11 +606,92 @@
         el: target,
         offsetX: e.clientX - rect.left,
         offsetY: e.clientY - rect.top,
-        pitchRect
+        pitchRect,
+        pointerId: e.pointerId
       };
+
+      // long-press setup
+      pointerDownTime = performance.now();
+      pointerMovedTooMuch = false;
+      pointerDownPos = { x: e.clientX, y: e.clientY };
+      longPressTimer = setTimeout(() => {
+        startRecordingForActor(id, target, pitchRect, e);
+      }, longPressThreshold);
 
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", onPointerUp);
+    }
+
+    function cancelLongPressTimer() {
+      if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }
+
+    function startRecordingForActor(actorId, el, pitchRect, e) {
+      // starta bara om fingret fortfarande är nere på samma element
+      recordingActorId = actorId;
+      recordingStartTime = performance.now();
+      const seqId = "SEQ" + (drillSequences.length + 1);
+      const kind = "run"; // senare kan vi skilja "runWithBall"
+      recordingSequence = {
+        id: seqId,
+        actorId,
+        kind,
+        startAt: 0, // vi lägger tidslinje senare
+        points: [],
+        svgId: seqId
+      };
+      drillSequences.push(recordingSequence);
+      el.classList.add("recording");
+
+      // skapa polyline i SVG
+      const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      polyline.setAttribute("id", seqId);
+      polyline.setAttribute("class", "run-path");
+      polyline.setAttribute("points", "");
+      overlaySvg.appendChild(polyline);
+
+      // lägg första punkt
+      const x = e.clientX - pitchRect.left;
+      const y = e.clientY - pitchRect.top;
+      addRecordingPoint(x, y);
+    }
+
+    function addRecordingPoint(x, y) {
+      if (!recordingSequence) return;
+      const pitchRect = pitch.getBoundingClientRect();
+      const t = (performance.now() - recordingStartTime) / 1000;
+      const xRel = x / pitchRect.width;
+      const yRel = y / pitchRect.height;
+      recordingSequence.points.push({ t, xRel, yRel });
+
+      const polyline = document.getElementById(recordingSequence.svgId);
+      if (polyline) {
+        const pts = recordingSequence.points
+          .map(p => (p.xRel * pitchRect.width) + "," + (p.yRel * pitchRect.height))
+          .join(" ");
+        polyline.setAttribute("points", pts);
+      }
+    }
+
+    function stopRecording() {
+      if (!recordingSequence) return;
+      const actorEl = [...pitch.querySelectorAll(".player")].find(el => el.dataset.id === recordingActorId);
+      if (actorEl) {
+        actorEl.classList.remove("recording");
+      }
+      // duration kan användas senare för uppspelning
+      if (recordingSequence.points.length > 0) {
+        const firstT = recordingSequence.points[0].t;
+        const lastT = recordingSequence.points[recordingSequence.points.length - 1].t;
+        recordingSequence.duration = lastT - firstT;
+      } else {
+        recordingSequence.duration = 0;
+      }
+      recordingSequence = null;
+      recordingActorId = null;
     }
 
     function setupGoalDrag(el) {
@@ -763,6 +882,13 @@
     function onPointerMove(e) {
       if (!dragInfo) return;
 
+      const moveDist = pointerDownPos
+        ? Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y)
+        : 0;
+      if (moveDist > 10) {
+        pointerMovedTooMuch = true;
+      }
+
       if (dragInfo.type === "player") {
         const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
 
@@ -780,6 +906,17 @@
           pState.xRel = x / pitchRect.width;
           pState.yRel = y / pitchRect.height;
         }
+
+        // om vi spelar in: lägg till punkt i sekvens
+        if (recordingActorId === id && recordingSequence) {
+          addRecordingPoint(x, y);
+        }
+
+        // om man har börjat dra mycket innan long-press går ut: avbryt long-press
+        if (pointerMovedTooMuch) {
+          cancelLongPressTimer();
+        }
+
       } else if (dragInfo.type === "goal") {
         const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
 
@@ -854,6 +991,10 @@
         const { pitchRect, id, el } = dragInfo;
         el.classList.remove("dragging");
         el.releasePointerCapture(e.pointerId);
+
+        cancelLongPressTimer();
+        stopRecording();
+
         resolveOverlapsForPlayer(id, pitchRect);
       } else if (dragInfo.type === "goal") {
         dragInfo.el.classList.remove("dragging");
@@ -1001,6 +1142,23 @@
       }
     }
 
+    function renderAllSequencesPaths() {
+      while (overlaySvg.firstChild) overlaySvg.removeChild(overlaySvg.firstChild);
+      const pitchRect = pitch.getBoundingClientRect();
+
+      for (const seq of drillSequences) {
+        if (!seq.points || !seq.points.length) continue;
+        const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+        polyline.setAttribute("id", seq.svgId);
+        polyline.setAttribute("class", "run-path");
+        const pts = seq.points
+          .map(p => (p.xRel * pitchRect.width) + "," + (p.yRel * pitchRect.height))
+          .join(" ");
+        polyline.setAttribute("points", pts);
+        overlaySvg.appendChild(polyline);
+      }
+    }
+
     function addGoal() {
       if (goalsState.length >= MAX_GOALS) return;
       pushUndoState();
@@ -1041,7 +1199,8 @@
         players: playersState,
         goals: goalsState,
         cones: conesState,
-        balls: ballsState
+        balls: ballsState,
+        drillSequences
       };
       stateOutput.textContent = JSON.stringify(fullState, null, 2);
     }
@@ -1064,6 +1223,7 @@
       renderGoals();
       renderCones();
       renderBalls();
+      renderAllSequencesPaths();
     });
 
     logStateBtn.addEventListener("click", renderState);
@@ -1091,6 +1251,7 @@
         renderGoals();
         renderCones();
         renderBalls();
+        renderAllSequencesPaths();
       }, 100);
     });
 
@@ -1103,6 +1264,7 @@
       renderGoals();
       renderCones();
       renderBalls();
+      renderAllSequencesPaths();
     });
   </script>
 </body>
