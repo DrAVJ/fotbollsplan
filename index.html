@@ -457,6 +457,10 @@
     let playbackSteps = [];   // [{step, recs, duration}]
     let playbackStartWall = 0;
     let playbackTotalDur = 0;
+    let pressTimer = null;          // timeout-id för 0.5 s
+    let pressRecordingReady = false; // om vi passerat 0.5 s
+    let pressActorId = null;        // vilken gubbe/boll som är kandidat
+
 
 
     function updateStepLabel() {
@@ -703,8 +707,34 @@
         recordingActorId = null;
       }
 
+            // starta ev. inspelning efter 0.5 s om recordMode är aktivt
+      pressRecordingReady = false;
+      pressActorId = id;
+
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+
+      if (recordMode) {
+        pressTimer = setTimeout(() => {
+          // om vi fortfarande drar samma spelare efter 0.5 s: starta REC
+          if (recordMode && dragInfo && dragInfo.type === "player" && dragInfo.id === id) {
+            pressRecordingReady = true;
+            currentRecording = {
+              id: "REC" + (recordings.length + 1),
+              actorId: id,
+              step: 1, // default, ändras i efterhand senare
+              startTime: performance.now(),
+              frames: []
+            };
+          }
+        }, 500);
+      }
+
       window.addEventListener("pointermove", onPointerMove);
       window.addEventListener("pointerup", onPointerUp);
+
     }
 
     function addRecordingPoint(x, y) {
@@ -1218,6 +1248,21 @@
         const { pitchRect, id, el } = dragInfo;
         el.classList.remove("dragging");
         el.releasePointerCapture(e.pointerId);
+                // stoppa ev. hold-timer
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+
+        // om en REC skapats för denna spelare: avsluta den
+        if (currentRecording && currentRecording.actorId === id) {
+          recordings.push(currentRecording);
+          currentRecording = null;
+          console.log("Recordings:", recordings);
+        }
+
+        pressRecordingReady = false;
+        pressActorId = null;
 
         stopRecording();
 
@@ -1542,23 +1587,16 @@ function playbackLoop() {
       if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
     });
 
-    recordToggleBtn.addEventListener("click", () => {
+   recordToggleBtn.addEventListener("click", () => {
   recordMode = !recordMode;
   recordToggleBtn.classList.toggle("selected", recordMode);
 
   if (recordMode) {
-    // visa steg-kontroller och starta ny inspelning
+    // bara aktivera inspelningsläge, ingen REC skapas ännu
     stepControls.style.display = "flex";
     updateStepLabel();
-
-    currentRecording = {
-      id: "REC" + (recordings.length + 1),
-      step: currentStep,
-      startTime: performance.now(),
-      frames: []
-    };
   } else {
-    // göm steg-kontroller och spara inspelning
+    // stäng av inspelningsläge, avbryt ev. pågående REC
     stepControls.style.display = "none";
 
     if (currentRecording) {
@@ -1566,8 +1604,16 @@ function playbackLoop() {
       currentRecording = null;
       console.log("Recordings:", recordings);
     }
+
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
+    pressRecordingReady = false;
+    pressActorId = null;
   }
 });
+
 
 
     // UI-kontroller
