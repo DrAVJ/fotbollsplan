@@ -454,6 +454,10 @@
     let recordings = [];          // alla inspelningar
     let currentRecording = null;  // inspelning som pågår nu
     let currentStep = 1;          // Steg 1, Steg 2, ...
+    let playbackSteps = [];   // [{step, recs, duration}]
+    let playbackStartWall = 0;
+    let playbackTotalDur = 0;
+
 
     function updateStepLabel() {
       stepLabel.textContent = "Steg " + currentStep;
@@ -1409,12 +1413,130 @@
     // (Playback-loopen lämnas som tidigare tills vi byter till nya recordings)
 
     playAllBtn.addEventListener("click", () => {
-      if (!drillSequences.length) return;
-      isPlaying = true;
-      playbackStartTime = performance.now();
-      // playbackLoop();  // gamla spelare-sekvensen används tills vi byter logik
-    });
+  if (!recordings.length) return;
 
+  // gruppera recordings per step
+  const byStep = new Map();
+  for (const rec of recordings) {
+    if (!byStep.has(rec.step)) byStep.set(rec.step, []);
+    byStep.get(rec.step).push(rec);
+  }
+
+  // skapa ordnad lista: [{step, recs, duration}]
+  playbackSteps = [];
+  const sortedSteps = Array.from(byStep.keys()).sort((a, b) => a - b);
+  for (const step of sortedSteps) {
+    const recs = byStep.get(step);
+    let maxDur = 0;
+    for (const rec of recs) {
+      if (!rec.frames.length) continue;
+      const t0 = rec.frames[0].t;
+      const tEnd = rec.frames[rec.frames.length - 1].t;
+      maxDur = Math.max(maxDur, tEnd - t0);
+    }
+    playbackSteps.push({ step, recs, duration: maxDur });
+  }
+
+  if (!playbackSteps.length) return;
+
+  playbackTotalDur = playbackSteps.reduce((sum, s) => sum + s.duration, 0);
+  isPlaying = true;
+  playbackStartWall = performance.now();
+  playbackLoop();
+});
+
+function playbackLoop() {
+  if (!isPlaying) return;
+  if (!playbackSteps.length) return;
+
+  const now = performance.now();
+  const tGlobal = (now - playbackStartWall) / 1000; // s sedan start
+  const pitchRect = pitch.getBoundingClientRect();
+
+  // loopa hela sekvensen
+  const tWrapped = playbackTotalDur > 0 ? (tGlobal % playbackTotalDur) : 0;
+
+  // hitta vilket steg vi är i
+  let acc = 0;
+  let current = playbackSteps[0];
+  for (const s of playbackSteps) {
+    if (tWrapped >= acc && tWrapped < acc + s.duration) {
+      current = s;
+      break;
+    }
+    acc += s.duration;
+  }
+
+  const localT = tWrapped - acc; // tid inom aktuellt steg
+
+  // för varje inspelning i detta steg: interpolera alla spelare + bollar
+  for (const rec of current.recs) {
+    const frames = rec.frames;
+    if (!frames || frames.length < 2) continue;
+
+    const t0 = frames[0].t;
+    const tEnd = frames[frames.length - 1].t;
+    const stepDur = tEnd - t0 || 0.001;
+    const t = t0 + Math.min(localT, stepDur); // clamp inom inspelningens längd
+
+    // hitta två frames runt t
+    let i = 0;
+    while (i < frames.length - 1 && frames[i + 1].t < t) i++;
+    const fA = frames[i];
+    const fB = frames[Math.min(i + 1, frames.length - 1)];
+    const span = (fB.t - fA.t) || 1e-6;
+    const u = Math.max(0, Math.min(1, (t - fA.t) / span));
+
+    // spelare
+    for (const id in fA.players) {
+      const a = fA.players[id];
+      const b = fB.players[id] || a;
+      const xRel = a.xRel + (b.xRel - a.xRel) * u;
+      const yRel = a.yRel + (b.yRel - a.yRel) * u;
+      const x = xRel * pitchRect.width;
+      const y = yRel * pitchRect.height;
+
+      const playerEl = [...pitch.querySelectorAll(".player")]
+        .find(el => el.dataset.id === id);
+      if (playerEl) {
+        playerEl.style.left = (x - PLAYER_RADIUS) + "px";
+        playerEl.style.top = (y - PLAYER_RADIUS) + "px";
+      }
+
+      const pState = playersState.find(p => p.id === id);
+      if (pState) {
+        pState.xRel = xRel;
+        pState.yRel = yRel;
+      }
+    }
+
+    // bollar
+    for (const id in fA.balls) {
+      const a = fA.balls[id];
+      const b = fB.balls[id] || a;
+      const xRel = a.xRel + (b.xRel - a.xRel) * u;
+      const yRel = a.yRel + (b.yRel - a.yRel) * u;
+      const x = xRel * pitchRect.width;
+      const y = yRel * pitchRect.height;
+
+      const ballEl = [...pitch.querySelectorAll(".ball")]
+        .find(el => el.dataset.id === id);
+      if (ballEl) {
+        ballEl.style.left = (x - BALL_RADIUS) + "px";
+        ballEl.style.top = (y - BALL_RADIUS) + "px";
+      }
+
+      const bState = ballsState.find(b => b.id === id);
+      if (bState) {
+        bState.xRel = xRel;
+        bState.yRel = yRel;
+      }
+    }
+  }
+
+  playbackRequestId = requestAnimationFrame(playbackLoop);
+}
+  
     stopPlayBtn.addEventListener("click", () => {
       isPlaying = false;
       if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
