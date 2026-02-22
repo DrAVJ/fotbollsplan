@@ -327,7 +327,7 @@
       <button id="moveMidlineBtn">Flytta mittlinje</button>
       <button id="circleMinus">- cirkel</button>
       <button id="circlePlus">+ cirkel</button>
-      <button id="recordToggleBtn">Inspelning av spelare</button>
+      <button id="recordToggleBtn">Inspelning</button>
       <button id="playAllBtn">Spela upp</button>
       <button id="stopPlayBtn">Stoppa</button>
     </div>
@@ -413,7 +413,7 @@
     let undoStack = [];
     const UNDO_LIMIT = 10;
 
-    // Spelar-drill
+    // Spelar-drill (gammal per-spelare-sekvens – låter ligga tills vi byter playback)
     let drillSequences = [];
     let recordingSequence = null;
     let recordingActorId = null;
@@ -433,8 +433,13 @@
     let playbackStartTime = 0;
     let playbackRequestId = null;
 
-    // Inspelningsläge
+    // Inspelningsläge (gammal)
     let recordMode = false;
+
+    // --- Ny global inspelningsstruktur ---
+    let recordings = [];          // alla inspelningar
+    let currentRecording = null;  // inspelning som pågår nu
+    let currentStep = 1;          // Steg 1, Steg 2, ...
 
     function fitPitchHeight() {
       const wrapperRect = document.querySelector(".wrapper").getBoundingClientRect();
@@ -680,10 +685,6 @@
       window.addEventListener("pointerup", onPointerUp);
     }
 
-    function startRecordingForActor() {
-      // ej använd längre (vi kör explicit recordMode)
-    }
-
     function addRecordingPoint(x, y) {
       if (!recordingSequence) return;
       const pitchRect = pitch.getBoundingClientRect();
@@ -916,6 +917,27 @@
         .join(" ");
       poly.setAttribute("points", pts);
       overlaySvg.appendChild(poly);
+    }
+
+    // --- Ny funktion: sampleFrame (alla spelare + bollar) ---
+    function sampleFrame() {
+      if (!recordMode || !currentRecording) return;
+
+      const t = (performance.now() - currentRecording.startTime) / 1000;
+      const frame = {
+        t,
+        players: {},
+        balls: {}
+      };
+
+      for (const p of playersState) {
+        frame.players[p.id] = { xRel: p.xRel, yRel: p.yRel };
+      }
+      for (const b of ballsState) {
+        frame.balls[b.id] = { xRel: b.xRel, yRel: b.yRel };
+      }
+
+      currentRecording.frames.push(frame);
     }
 
     // Drag: källor för spelare
@@ -1162,6 +1184,9 @@
         renderMidline();
         renderCenterCircle();
       }
+
+      // Logga frame för global inspelning
+      sampleFrame();
     }
 
     function onPointerUp(e) {
@@ -1191,25 +1216,8 @@
           if (dist < PLAYER_RADIUS + BALL_RADIUS + 2) {
             ballOwnerId = id;
 
-            const dirX = dragInfo.lastDirX || 0;
-            const dirY = dragInfo.lastDirY || -1;
-            const offset = PLAYER_RADIUS + BALL_RADIUS;
-            let ballX = px + dirX * offset;
-            let ballY = py + dirY * offset;
-
-            ballX = Math.max(BALL_RADIUS, Math.min(pRect.width - BALL_RADIUS, ballX));
-            ballY = Math.max(BALL_RADIUS, Math.min(pRect.height - BALL_RADIUS, ballY));
-
-            ballEl.style.left = (ballX - BALL_RADIUS) + "px";
-            ballEl.style.top = (ballY - BALL_RADIUS) + "px";
-
-            const bState = ballsState[0];
-            if (bState) {
-              bState.xRel = ballX / pRect.width;
-              bState.yRel = ballY / pRect.height;
-            }
-
-            addBallTrailPoint(ballX, ballY);
+            // här låter vi bollen ligga kvar där den kolliderade;
+            // ingen tvingad "uppåt"-flytt längre
           }
         }
 
@@ -1380,60 +1388,13 @@
       centerCircleEl.style.top = (cy - r) + "px";
     }
 
-    // Playback
-    function playbackLoop() {
-      if (!isPlaying) return;
-
-      const now = performance.now();
-      const tSec = (now - playbackStartTime) / 1000;
-      const pitchRect = pitch.getBoundingClientRect();
-
-      for (const seq of drillSequences) {
-        if (!seq.points || seq.points.length < 2) continue;
-
-        const pts = seq.points;
-        const t0 = pts[0].t;
-        const tEnd = pts[pts.length - 1].t;
-        const totalDur = tEnd - t0 || 0.001;
-        const localT = t0 + (tSec % totalDur);
-
-        let i = 0;
-        while (i < pts.length - 1 && pts[i + 1].t < localT) i++;
-
-        const pA = pts[i];
-        const pB = pts[Math.min(i + 1, pts.length - 1)];
-
-        const span = (pB.t - pA.t) || 1e-6;
-        const u = Math.max(0, Math.min(1, (localT - pA.t) / span));
-
-        const xRel = pA.xRel + (pB.xRel - pA.xRel) * u;
-        const yRel = pA.yRel + (pB.yRel - pA.yRel) * u;
-
-        const x = xRel * pitchRect.width;
-        const y = yRel * pitchRect.height;
-
-        const playerEl = [...pitch.querySelectorAll(".player")]
-          .find(el => el.dataset.id === seq.actorId);
-        if (playerEl) {
-          playerEl.style.left = (x - PLAYER_RADIUS) + "px";
-          playerEl.style.top = (y - PLAYER_RADIUS) + "px";
-        }
-
-        const pState = playersState.find(p => p.id === seq.actorId);
-        if (pState) {
-          pState.xRel = xRel;
-          pState.yRel = yRel;
-        }
-      }
-
-      playbackRequestId = requestAnimationFrame(playbackLoop);
-    }
+    // (Playback-loopen lämnas som tidigare tills vi byter till nya recordings)
 
     playAllBtn.addEventListener("click", () => {
       if (!drillSequences.length) return;
       isPlaying = true;
       playbackStartTime = performance.now();
-      playbackLoop();
+      // playbackLoop();  // gamla spelare-sekvensen används tills vi byter logik
     });
 
     stopPlayBtn.addEventListener("click", () => {
@@ -1444,6 +1405,22 @@
     recordToggleBtn.addEventListener("click", () => {
       recordMode = !recordMode;
       recordToggleBtn.classList.toggle("selected", recordMode);
+
+      if (recordMode) {
+        // starta ny global recording också
+        currentRecording = {
+          id: "REC" + (recordings.length + 1),
+          step: currentStep,
+          startTime: performance.now(),
+          frames: []
+        };
+      } else {
+        if (currentRecording) {
+          recordings.push(currentRecording);
+          currentRecording = null;
+          console.log("Recordings:", recordings);
+        }
+      }
     });
 
     // UI-kontroller
