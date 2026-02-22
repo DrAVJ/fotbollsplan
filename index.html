@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <title>Träningsplan – mål + spelare</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #111;
+      color: #f5f5f5;
+      box-sizing: border-box;
+      min-height: 150vh;
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .controls-row2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+    }
+
+    .controls-row3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      font-size: 0.85rem;
+    }
+
+    input[type="number"] {
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #444;
+      background: #222;
+      color: #f5f5f5;
+      font-size: 0.9rem;
+      width: 70px;
+    }
+
+    input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+    }
+
+    button {
+      padding: 6px 10px;
+      border-radius: 4px;
+      border: none;
+      background: #2e8b57;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    .wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .pitch-wrapper {
+      position: relative;
+    }
+
+    .pitch {
+      position: relative;
+      width: 100%;
+      background: #1f7a3c;
+      border-radius: 12px;
+      border: 2px solid #fff;
+      overflow: hidden;
+      touch-action: none;
+      pointer-events: none;
+    }
+
+    .pitch.show-lines::before,
+    .pitch.show-lines::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .pitch.show-lines::before {
+      left: 0;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+      height: 0;
+      border-top: 2px solid #fff;
+      opacity: 0.7;
+    }
+
+    .pitch.show-lines::after {
+      width: 30%;
+      height: 0;
+      padding-top: 30%;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .pitch-resize-handle {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: -14px;
+      width: 80px;
+      height: 14px;
+      border-radius: 8px;
+      background: #333;
+      border: 1px solid #777;
+      color: #ccc;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 15;
+      cursor: ns-resize;
+      touch-action: none;
+      pointer-events: auto;
+    }
+
+    .player {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      box-shadow: 0 0 0 2px #fff;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      pointer-events: auto;
+    }
+
+    .player.blue {
+      background: #007bff;
+    }
+
+    .player.red {
+      background: #e53935;
+    }
+
+    .player.dragging {
+      opacity: 0.8;
+      cursor: grabbing;
+    }
+
+    .goal {
+      position: absolute;
+      width: 40px;
+      height: 16px;
+      border: 2px solid #fff;
+      background: rgba(0, 0, 0, 0.2);
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 600;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      pointer-events: auto;
+      transform-origin: center center;
+    }
+
+    .goal-label {
+      pointer-events: none;
+    }
+
+    .goal-rotate {
+      position: absolute;
+      right: -10px;
+      top: -10px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.7);
+      color: #fff;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    .goal.dragging {
+      opacity: 0.8;
+    }
+
+    pre {
+      margin-top: 16px;
+      font-size: 0.75rem;
+      background: #000;
+      padding: 8px;
+      border-radius: 6px;
+      max-height: 180px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <h1>Två lag – dragbar plan, mål & spelare</h1>
+
+    <div class="controls">
+      <label for="blueCount">Blå:</label>
+      <input id="blueCount" type="number" min="0" max="22" value="5" />
+      <label for="redCount">Röda:</label>
+      <input id="redCount" type="number" min="0" max="22" value="5" />
+      <button id="generatePlayers">Slumpa lag</button>
+      <button id="logState">Visa data</button>
+    </div>
+
+    <div class="controls-row2">
+      <label>
+        <input type="checkbox" id="showLines" checked />
+        Visa mittlinje & cirkel
+      </label>
+      <span id="ratioDisplay">Ratio: 3:2</span>
+    </div>
+
+    <div class="controls-row3">
+      <span>Mål:</span>
+      <button id="addGoalBtn">Lägg till mål (max 4)</button>
+      <button id="clearGoalsBtn">Ta bort alla mål</button>
+    </div>
+
+    <div class="pitch-wrapper">
+      <div id="pitch" class="pitch show-lines"></div>
+      <div id="resizeHandle" class="pitch-resize-handle">Dra för längd</div>
+    </div>
+
+    <pre id="stateOutput"></pre>
+  </div>
+
+  <script>
+    const pitch = document.getElementById("pitch");
+    const resizeHandle = document.getElementById("resizeHandle");
+    const blueCountInput = document.getElementById("blueCount");
+    const redCountInput = document.getElementById("redCount");
+    const generateBtn = document.getElementById("generatePlayers");
+    const logStateBtn = document.getElementById("logState");
+    const stateOutput = document.getElementById("stateOutput");
+    const showLinesCheckbox = document.getElementById("showLines");
+    const ratioDisplay = document.getElementById("ratioDisplay");
+    const addGoalBtn = document.getElementById("addGoalBtn");
+    const clearGoalsBtn = document.getElementById("clearGoalsBtn");
+
+    let playersState = [];
+    let goalsState = []; // { id, xRel, yRel, rotationDeg }
+    let dragInfo = null;
+
+    const PLAYER_RADIUS = 16;
+    const MIN_DIST = PLAYER_RADIUS * 2 * 1.1;
+    const MAX_RELAX_STEPS = 20;
+    const MAX_GOALS = 4;
+
+    function initPitchHeight() {
+      const rect = pitch.getBoundingClientRect();
+      const targetHeight = rect.width * (2 / 3);
+      pitch.style.height = targetHeight + "px";
+      updateRatioDisplay();
+    }
+
+    function updateRatioDisplay() {
+      const rect = pitch.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+      const ratio = (w / h).toFixed(2);
+      ratioDisplay.textContent = "Ratio: " + ratio + " : 1";
+    }
+
+    function applyLinesClass() {
+      if (showLinesCheckbox.checked) {
+        pitch.classList.add("show-lines");
+      } else {
+        pitch.classList.remove("show-lines");
+      }
+    }
+
+    function createPlayers() {
+      // rensa spelare men inte mål
+      [...pitch.querySelectorAll(".player")].forEach(el => el.remove());
+      playersState = [];
+
+      applyLinesClass();
+
+      const blueCount = Math.max(0, Math.min(22, Number(blueCountInput.value) || 0));
+      const redCount = Math.max(0, Math.min(22, Number(redCountInput.value) || 0));
+      const pitchRect = pitch.getBoundingClientRect();
+
+      const placed = [];
+
+      // ta hänsyn till befintliga mål som hinder för startplacering
+      for (const g of goalsState) {
+        const gx = g.xRel * pitchRect.width;
+        const gy = g.yRel * pitchRect.height;
+        placed.push({ x: gx, y: gy });
+      }
+
+      for (let i = 1; i <= blueCount; i++) {
+        const { x, y, xRel, yRel } = getNonOverlappingPosition(placed, pitchRect, "top");
+        placed.push({ x, y });
+
+        const el = document.createElement("div");
+        el.className = "player blue";
+        el.textContent = i;
+        el.dataset.id = `B${i}`;
+        el.dataset.team = "blue";
+
+        el.style.left = (x - PLAYER_RADIUS) + "px";
+        el.style.top = (y - PLAYER_RADIUS) + "px";
+
+        pitch.appendChild(el);
+        setupPlayerDrag(el);
+
+        playersState.push({ id: `B${i}`, team: "blue", xRel, yRel });
+      }
+
+      for (let j = 1; j <= redCount; j++) {
+        const { x, y, xRel, yRel } = getNonOverlappingPosition(placed, pitchRect, "bottom");
+        placed.push({ x, y });
+
+        const el = document.createElement("div");
+        el.className = "player red";
+        el.textContent = j;
+        el.dataset.id = `R${j}`;
+        el.dataset.team = "red";
+
+        el.style.left = (x - PLAYER_RADIUS) + "px";
+        el.style.top = (y - PLAYER_RADIUS) + "px";
+
+        pitch.appendChild(el);
+        setupPlayerDrag(el);
+
+        playersState.push({ id: `R${j}`, team: "red", xRel, yRel });
+      }
+
+      renderState();
+    }
+
+    function getNonOverlappingPosition(placed, pitchRect, side) {
+      let xRel, yRel, x, y;
+      let tries = 0;
+      const maxTries = 300;
+
+      do {
+        const marginX = 0.05;
+        const marginY = 0.05;
+
+        const xMin = marginX;
+        const xMax = 1 - marginX;
+        xRel = xMin + Math.random() * (xMax - xMin);
+
+        if (side === "top") {
+          const yMin = marginY;
+          const yMax = 0.5 - marginY;
+          yRel = yMin + Math.random() * (yMax - yMin);
+        } else if (side === "bottom") {
+          const yMin = 0.5 + marginY;
+          const yMax = 1 - marginY;
+          yRel = yMin + Math.random() * (yMax - yMin);
+        } else {
+          const margin = 0.08;
+          yRel = margin + Math.random() * (1 - 2 * margin);
+        }
+
+        x = xRel * pitchRect.width;
+        y = yRel * pitchRect.height;
+
+        tries++;
+      } while (isTooClose(x, y, placed) && tries < maxTries);
+
+      return { x, y, xRel, yRel };
+    }
+
+    function isTooClose(x, y, placed) {
+      for (const p of placed) {
+        const dx = x - p.x;
+        const dy = y - p.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < MIN_DIST) return true;
+      }
+      return false;
+    }
+
+    function setupPlayerDrag(el) {
+      el.addEventListener("pointerdown", onPointerDownPlayer);
+    }
+
+    function onPointerDownPlayer(e) {
+      const target = e.currentTarget;
+      const id = target.dataset.id;
+
+      target.setPointerCapture(e.pointerId);
+      target.classList.add("dragging");
+
+      const rect = target.getBoundingClientRect();
+      const pitchRect = pitch.getBoundingClientRect();
+
+      dragInfo = {
+        type: "player",
+        id,
+        el: target,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        pitchRect
+      };
+
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    }
+
+    function setupGoalDrag(el) {
+      el.addEventListener("pointerdown", (e) => {
+        // undvik drag när man trycker på rotate-knappen
+        if (e.target.classList.contains("goal-rotate")) return;
+
+        const target = el;
+        const id = target.dataset.id;
+
+        target.setPointerCapture(e.pointerId);
+        target.classList.add("dragging");
+
+        const rect = target.getBoundingClientRect();
+        const pitchRect = pitch.getBoundingClientRect();
+
+        dragInfo = {
+          type: "goal",
+          id,
+          el: target,
+          offsetX: e.clientX - rect.left,
+          offsetY: e.clientY - rect.top,
+          pitchRect
+        };
+
+        window.addEventListener("pointermove", onPointerMove);
+        window.addEventListener("pointerup", onPointerUp);
+      });
+
+      const rotateBtn = el.querySelector(".goal-rotate");
+      rotateBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = el.dataset.id;
+        const gState = goalsState.find(g => g.id === id);
+        if (!gState) return;
+        gState.rotationDeg = (gState.rotationDeg + 90) % 360;
+        el.style.transform = `translate(-50%, -50%) rotate(${gState.rotationDeg}deg)`;
+        renderState();
+      });
+    }
+
+    function onPointerMove(e) {
+      if (!dragInfo) return;
+
+      if (dragInfo.type === "player") {
+        const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
+
+        let x = e.clientX - pitchRect.left - offsetX + PLAYER_RADIUS;
+        let y = e.clientY - pitchRect.top - offsetY + PLAYER_RADIUS;
+
+        x = Math.max(0, Math.min(pitchRect.width, x));
+        y = Math.max(0, Math.min(pitchRect.height, y));
+
+        el.style.left = (x - PLAYER_RADIUS) + "px";
+        el.style.top = (y - PLAYER_RADIUS) + "px";
+
+        const pState = playersState.find(p => p.id === id);
+        if (pState) {
+          pState.xRel = x / pitchRect.width;
+          pState.yRel = y / pitchRect.height;
+        }
+      } else if (dragInfo.type === "goal") {
+        const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
+
+        let x = e.clientX - pitchRect.left - offsetX + el.offsetWidth / 2;
+        let y = e.clientY - pitchRect.top - offsetY + el.offsetHeight / 2;
+
+        x = Math.max(0, Math.min(pitchRect.width, x));
+        y = Math.max(0, Math.min(pitchRect.height, y));
+
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+
+        const gState = goalsState.find(g => g.id === id);
+        if (gState) {
+          gState.xRel = x / pitchRect.width;
+          gState.yRel = y / pitchRect.height;
+        }
+      } else if (dragInfo.type === "resize") {
+        const { startY, startHeight } = dragInfo;
+        const dy = e.clientY - startY;
+        let newHeight = startHeight + dy;
+
+        const rect = pitch.getBoundingClientRect();
+        const minHeight = rect.width * 0.4;
+        const maxHeight = rect.width * 1.6;
+
+        newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+        pitch.style.height = newHeight + "px";
+
+        updateRatioDisplay();
+      }
+    }
+
+    function onPointerUp(e) {
+      if (!dragInfo) return;
+
+      if (dragInfo.type === "player") {
+        const { pitchRect, id, el } = dragInfo;
+        el.classList.remove("dragging");
+        el.releasePointerCapture(e.pointerId);
+
+        resolveOverlapsForPlayer(id, pitchRect);
+      } else if (dragInfo.type === "goal") {
+        dragInfo.el.classList.remove("dragging");
+        dragInfo.el.releasePointerCapture(e.pointerId);
+      } else if (dragInfo.type === "resize") {
+        resizeHandle.releasePointerCapture(e.pointerId);
+      }
+
+      dragInfo = null;
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+
+      renderState();
+    }
+
+    function resolveOverlapsForPlayer(id, pitchRect) {
+      const playerEl = [...pitch.querySelectorAll(".player")].find(el => el.dataset.id === id);
+      if (!playerEl) return;
+
+      let x = parseFloat(playerEl.style.left) + PLAYER_RADIUS;
+      let y = parseFloat(playerEl.style.top) + PLAYER_RADIUS;
+
+      for (let step = 0; step < MAX_RELAX_STEPS; step++) {
+        let moved = false;
+
+        const others = playersState.filter(p => p.id !== id);
+        for (const other of others) {
+          const ox = other.xRel * pitchRect.width;
+          const oy = other.yRel * pitchRect.height;
+
+          const dx = x - ox;
+          const dy = y - oy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < MIN_DIST && dist > 0) {
+            const overlap = MIN_DIST - dist;
+            const nx = dx / dist;
+            const ny = dy / dist;
+
+            x += nx * overlap * 0.6;
+            y += ny * overlap * 0.6;
+
+            moved = true;
+          }
+        }
+
+        x = Math.max(0, Math.min(pitchRect.width, x));
+        y = Math.max(0, Math.min(pitchRect.height, y));
+
+        if (!moved) break;
+      }
+
+      playerEl.style.left = (x - PLAYER_RADIUS) + "px";
+      playerEl.style.top = (y - PLAYER_RADIUS) + "px";
+
+      const pState = playersState.find(p => p.id === id);
+      if (pState) {
+        pState.xRel = x / pitchRect.width;
+        pState.yRel = y / pitchRect.height;
+      }
+    }
+
+    function renderGoals() {
+      // ta bort gamla mål
+      [...pitch.querySelectorAll(".goal")].forEach(el => el.remove());
+
+      const pitchRect = pitch.getBoundingClientRect();
+
+      for (const g of goalsState) {
+        const el = document.createElement("div");
+        el.className = "goal";
+        el.dataset.id = g.id;
+
+        const label = document.createElement("span");
+        label.className = "goal-label";
+        label.textContent = "Mål";
+        el.appendChild(label);
+
+        const rotateBtn = document.createElement("div");
+        rotateBtn.className = "goal-rotate";
+        rotateBtn.textContent = "⟳";
+        el.appendChild(rotateBtn);
+
+        const x = g.xRel * pitchRect.width;
+        const y = g.yRel * pitchRect.height;
+
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.style.transform = `translate(-50%, -50%) rotate(${g.rotationDeg}deg)`;
+
+        pitch.appendChild(el);
+        setupGoalDrag(el);
+      }
+    }
+
+    function addGoal() {
+      if (goalsState.length >= MAX_GOALS) return;
+
+      const pitchRect = pitch.getBoundingClientRect();
+      // default position: mitten av nedre kortsidan, liggande
+      const xRel = 0.5;
+      const yRel = 0.95;
+      const id = "G" + (goalsState.length + 1);
+
+      goalsState.push({
+        id,
+        xRel,
+        yRel,
+        rotationDeg: 0
+      });
+
+      renderGoals();
+      renderState();
+    }
+
+    function clearGoals() {
+      goalsState = [];
+      renderGoals();
+      renderState();
+    }
+
+    function renderState() {
+      const fullState = {
+        players: playersState,
+        goals: goalsState
+      };
+      stateOutput.textContent = JSON.stringify(fullState, null, 2);
+    }
+
+    resizeHandle.addEventListener("pointerdown", (e) => {
+      const rect = pitch.getBoundingClientRect();
+      resizeHandle.setPointerCapture(e.pointerId);
+      dragInfo = {
+        type: "resize",
+        startY: e.clientY,
+        startHeight: rect.height
+      };
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    });
+
+    generateBtn.addEventListener("click", () => {
+      createPlayers();
+      renderGoals();
+    });
+    logStateBtn.addEventListener("click", renderState);
+    showLinesCheckbox.addEventListener("change", () => {
+      applyLinesClass();
+    });
+    addGoalBtn.addEventListener("click", addGoal);
+    clearGoalsBtn.addEventListener("click", clearGoals);
+
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        initPitchHeight();
+        applyLinesClass();
+        createPlayers();
+        renderGoals();
+      }, 100);
+    });
+
+    window.addEventListener("resize", () => {
+      const rect = pitch.getBoundingClientRect();
+      const currentRatio = rect.width / rect.height;
+      const newHeight = rect.width / currentRatio;
+      pitch.style.height = newHeight + "px";
+      updateRatioDisplay();
+      renderGoals(); // uppdatera målpositioner visuellt
+    });
+  </script>
+</body>
+</html>
