@@ -5,51 +5,50 @@
   <title>Träningsplan – dra in alla objekt</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden; /* ingen scroll */
+    }
+
     body {
       font-family: system-ui, sans-serif;
-      margin: 0;
-      padding: 16px;
       background: #111;
       color: #f5f5f5;
       box-sizing: border-box;
-      min-height: 150vh;
-
-      -webkit-touch-callout: none;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
     }
 
     h1 {
       font-size: 1.2rem;
-      margin-bottom: 8px;
+      margin: 0 0 8px 0;
     }
 
-    .controls {
+    .wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 16px;
+      height: 100%;
+      box-sizing: border-box;
       display: flex;
-      align-items: center;
+      flex-direction: column;
       gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
     }
 
     .controls-row2 {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 8px;
       flex-wrap: wrap;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
 
     .controls-row3 {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 12px;
       flex-wrap: wrap;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
     }
 
     input[type="checkbox"] {
@@ -58,29 +57,24 @@
     }
 
     button {
-      padding: 6px 10px;
+      padding: 4px 8px;
       border-radius: 4px;
       border: none;
       background: #2e8b57;
       color: #fff;
       font-weight: 600;
       cursor: pointer;
+      font-size: 0.8rem;
     }
 
     button:active {
       transform: scale(0.97);
     }
 
-    .wrapper {
-      max-width: 600px;
-      margin: 0 auto;
-    }
-
     .palette {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 8px;
       font-size: 0.8rem;
       align-items: center;
     }
@@ -100,11 +94,16 @@
       position: relative;
       -webkit-user-select: none;
       user-select: none;
+      flex: 1;
+      display: flex;
+      align-items: stretch;
     }
 
     .pitch {
       position: relative;
       width: 100%;
+      height: 80vh; /* större default */
+      max-height: 100%;
       background: #1f7a3c;
       border-radius: 12px;
       border: 2px solid #fff;
@@ -113,32 +112,8 @@
       pointer-events: none;
     }
 
-    .pitch.show-lines::before,
-    .pitch.show-lines::after {
-      content: "";
-      position: absolute;
-      pointer-events: none;
-    }
-
-    .pitch.show-lines::before {
-      left: 0;
-      right: 0;
-      top: 50%;
-      transform: translateY(-50%);
-      height: 0;
-      border-top: 2px solid #fff;
-      opacity: 0.7;
-    }
-
-    .pitch.show-lines::after {
-      width: 30%;
-      height: 0;
-      padding-top: 30%;
-      border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+    .pitch.show-lines {
+      /* mittlinje & cirkel hanteras nu av egna element */
     }
 
     .pitch-resize-handle {
@@ -160,6 +135,24 @@
       cursor: ns-resize;
       touch-action: none;
       pointer-events: auto;
+    }
+
+    #midline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 0;
+      border-top: 2px solid #fff;
+      opacity: 0.7;
+      pointer-events: auto;
+      cursor: ns-resize;
+    }
+
+    #centerCircle {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      pointer-events: none;
     }
 
     .player {
@@ -199,7 +192,6 @@
 
     .goal {
       position: absolute;
-      /* lite bredare mål */
       width: 60px;
       height: 18px;
       border: 2px solid #fff;
@@ -225,8 +217,7 @@
     .cone-icon,
     .ball-icon,
     .player-blue-icon,
-    .player-red-icon,
-    .goal-icon {
+    .player-red-icon {
       width: 26px;
       height: 26px;
       border-radius: 50%;
@@ -235,6 +226,23 @@
       justify-content: center;
       font-size: 14px;
       font-weight: 700;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      pointer-events: auto;
+    }
+
+    .goal-icon {
+      border-radius: 6px;
+      width: 40px;
+      height: 18px;
+      border: 2px solid #fff;
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      font-size: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       user-select: none;
       touch-action: none;
       cursor: grab;
@@ -263,16 +271,6 @@
       background: #e53935;
       box-shadow: 0 0 0 2px #fff;
       color: #fff;
-    }
-
-    .goal-icon {
-      border-radius: 6px;
-      width: 40px;
-      height: 18px;
-      border: 2px solid #fff;
-      background: rgba(0, 0, 0, 0.3);
-      color: #fff;
-      font-size: 10px;
     }
 
     .cone {
@@ -327,19 +325,6 @@
       stroke-linecap: round;
       stroke-linejoin: round;
     }
-
-    pre {
-      margin-top: 16px;
-      font-size: 0.75rem;
-      background: #000;
-      padding: 8px;
-      border-radius: 6px;
-      max-height: 180px;
-      overflow: auto;
-
-      -webkit-user-select: text;
-      user-select: text;
-    }
   </style>
 </head>
 <body>
@@ -353,6 +338,9 @@
       </label>
       <span id="ratioDisplay">Ratio: 3:2</span>
       <button id="undoBtn">Ångra</button>
+      <button id="moveMidlineBtn">Flytta mittlinje</button>
+      <button id="circleMinus">- cirkel</button>
+      <button id="circlePlus">+ cirkel</button>
     </div>
 
     <div class="palette">
@@ -386,21 +374,25 @@
 
     <div class="pitch-wrapper">
       <div id="pitch" class="pitch show-lines"></div>
+      <div id="midline"></div>
+      <div id="centerCircle"></div>
       <svg id="overlaySvg" class="overlay-svg"></svg>
       <div id="resizeHandle" class="pitch-resize-handle">Dra för längd</div>
     </div>
-
-    <pre id="stateOutput"></pre>
   </div>
 
   <script>
     const pitch = document.getElementById("pitch");
     const resizeHandle = document.getElementById("resizeHandle");
-    const stateOutput = document.getElementById("stateOutput");
     const showLinesCheckbox = document.getElementById("showLines");
     const ratioDisplay = document.getElementById("ratioDisplay");
     const undoBtn = document.getElementById("undoBtn");
     const overlaySvg = document.getElementById("overlaySvg");
+    const midlineEl = document.getElementById("midline");
+    const centerCircleEl = document.getElementById("centerCircle");
+    const moveMidlineBtn = document.getElementById("moveMidlineBtn");
+    const circleMinusBtn = document.getElementById("circleMinus");
+    const circlePlusBtn = document.getElementById("circlePlus");
 
     const playerBlueSource = document.getElementById("playerBlueSource");
     const playerRedSource = document.getElementById("playerRedSource");
@@ -408,10 +400,10 @@
     const coneSource = document.getElementById("coneSource");
     const ballSource = document.getElementById("ballSource");
 
-    let playersState = []; // {id, team, xRel, yRel}
-    let goalsState = [];   // {id, xRel, yRel, rotationDeg}
-    let conesState = [];   // {id, xRel, yRel}
-    let ballsState = [];   // {id, xRel, yRel}
+    let playersState = [];
+    let goalsState = [];
+    let conesState = [];
+    let ballsState = [];
     let dragInfo = null;
 
     let playerBlueCounter = 0;
@@ -429,7 +421,7 @@
     let undoStack = [];
     const UNDO_LIMIT = 10;
 
-    // Drill-sekvenser (spelare)
+    // Spelar-drill
     let drillSequences = [];
     let recordingSequence = null;
     let recordingActorId = null;
@@ -444,6 +436,11 @@
     let ballOwnerId = null;
     let ballTrailPoints = [];
 
+    // Mittlinje & cirkel
+    let midlineYRel = 0.5;
+    let midlineMoveMode = false;
+    let centerCircleRadiusRel = 0.15;
+
     function pushUndoState() {
       const snapshot = JSON.parse(JSON.stringify({
         playersState,
@@ -452,7 +449,9 @@
         ballsState,
         drillSequences,
         ballOwnerId,
-        ballTrailPoints
+        ballTrailPoints,
+        midlineYRel,
+        centerCircleRadiusRel
       }));
       undoStack.push(snapshot);
       if (undoStack.length > UNDO_LIMIT) undoStack.shift();
@@ -466,6 +465,8 @@
       drillSequences = JSON.parse(JSON.stringify(snapshot.drillSequences));
       ballOwnerId = snapshot.ballOwnerId || null;
       ballTrailPoints = snapshot.ballTrailPoints || [];
+      midlineYRel = snapshot.midlineYRel ?? 0.5;
+      centerCircleRadiusRel = snapshot.centerCircleRadiusRel ?? 0.15;
 
       [...pitch.querySelectorAll(".player")].forEach(el => el.remove());
       [...pitch.querySelectorAll(".goal")].forEach(el => el.remove());
@@ -495,14 +496,8 @@
       renderBalls();
       renderAllSequencesPaths();
       renderBallTrail();
-      renderState();
-    }
-
-    function initPitchHeight() {
-      const rect = pitch.getBoundingClientRect();
-      const targetHeight = rect.width * (2 / 3);
-      pitch.style.height = targetHeight + "px";
-      updateRatioDisplay();
+      renderMidline();
+      renderCenterCircle();
     }
 
     function updateRatioDisplay() {
@@ -514,8 +509,15 @@
     }
 
     function applyLinesClass() {
-      if (showLinesCheckbox.checked) pitch.classList.add("show-lines");
-      else pitch.classList.remove("show-lines");
+      if (showLinesCheckbox.checked) {
+        pitch.classList.add("show-lines");
+        midlineEl.style.display = "";
+        centerCircleEl.style.display = "";
+      } else {
+        pitch.classList.remove("show-lines");
+        midlineEl.style.display = "none";
+        centerCircleEl.style.display = "none";
+      }
     }
 
     function clearSelectionHighlight() {
@@ -524,14 +526,13 @@
       });
     }
 
-    // --- PROTOTYPISK CLICK-HANTERING: trippel = ta bort, dubbel på mål = rotera ---
+    // Klick-logik: trippel = ta bort, dubbel på mål = rotera
     function setupClickHandlers(el) {
       let clickCount = 0;
       let clickTimer = null;
 
       el.addEventListener("click", (e) => {
         if (e.detail === 3) {
-          // trippel-klick → ta bort
           handleTripleClick(el);
           return;
         }
@@ -540,11 +541,8 @@
         if (clickTimer) clearTimeout(clickTimer);
 
         clickTimer = setTimeout(() => {
-          if (clickCount === 2) {
-            if (el.classList.contains("goal")) {
-              // dubbelklick på mål → rotera
-              rotateGoal(el);
-            }
+          if (clickCount === 2 && el.classList.contains("goal")) {
+            rotateGoal(el);
           }
           clickCount = 0;
           clickTimer = null;
@@ -559,6 +557,7 @@
       pushUndoState();
 
       if (type === "player") {
+        clearSequenceForPlayer(id);
         const idx = playersState.findIndex(p => p.id === id);
         if (idx !== -1) playersState.splice(idx, 1);
       } else if (type === "goal") {
@@ -573,7 +572,6 @@
       }
 
       el.remove();
-      renderState();
     }
 
     function getElementType(el) {
@@ -591,11 +589,23 @@
       pushUndoState();
       gState.rotationDeg = (gState.rotationDeg + 90) % 360;
       el.style.transform = `translate(-50%, -50%) rotate(${gState.rotationDeg}deg)`;
-      renderState();
     }
 
-    // --- DRAG FÖR SPELARE ---
+    // Rensa trail för en spelare
+    function clearSequenceForPlayer(playerId) {
+      const keep = [];
+      for (const seq of drillSequences) {
+        if (seq.actorId !== playerId) {
+          keep.push(seq);
+        } else {
+          const el = document.getElementById(seq.svgId);
+          if (el) el.remove();
+        }
+      }
+      drillSequences = keep;
+    }
 
+    // DRAG: spelare
     function setupPlayerDrag(el) {
       el.addEventListener("pointerdown", onPointerDownPlayer);
     }
@@ -606,6 +616,9 @@
 
       const target = e.currentTarget;
       const id = target.dataset.id;
+
+      pushUndoState();
+      clearSequenceForPlayer(id);
 
       target.setPointerCapture(e.pointerId);
       target.classList.add("dragging");
@@ -707,12 +720,13 @@
       recordingActorId = null;
     }
 
-    // --- DRAG FÖR MÅL/CONES/BOLL ---
-
+    // DRAG: mål / konor / boll
     function setupGoalDrag(el) {
       el.addEventListener("pointerdown", (e) => {
         clearSelectionHighlight();
         el.classList.add("selected");
+
+        pushUndoState();
 
         const target = el;
         const id = target.dataset.id;
@@ -755,8 +769,9 @@
       const pitchRect = pitch.getBoundingClientRect();
       const source = e.currentTarget;
 
+      pushUndoState();
+
       if (source === coneSource) {
-        pushUndoState();
         coneCounter++;
         const id = "C" + coneCounter;
         const coneEl = document.createElement("div");
@@ -796,8 +811,9 @@
       const pitchRect = pitch.getBoundingClientRect();
       const source = e.currentTarget;
 
+      pushUndoState();
+
       if (source === ballSource) {
-        pushUndoState();
         ballCounter++;
         const id = "BAll" + ballCounter;
         const ballEl = document.createElement("div");
@@ -906,98 +922,94 @@
       overlaySvg.appendChild(poly);
     }
 
-    // --- DRAG FÖR BLÅ/RÖD SPELARE & MÅL KÄLLOR ---
-
+    // Drag: källor för spelare
     function setupPlayerSourceDrag(sourceEl, team) {
       sourceEl.addEventListener("pointerdown", (e) => {
         clearSelectionHighlight();
         const pitchRect = pitch.getBoundingClientRect();
 
-        if (sourceEl === e.currentTarget) {
-          pushUndoState();
-          const isBlue = team === "blue";
-          if (isBlue) playerBlueCounter++;
-          else playerRedCounter++;
-          const id = isBlue ? "B" + playerBlueCounter : "R" + playerRedCounter;
+        pushUndoState();
 
-          const playerEl = document.createElement("div");
-          playerEl.className = "player " + team;
-          playerEl.dataset.id = id;
-          playerEl.dataset.team = team;
-          playerEl.textContent = isBlue ? playerBlueCounter : playerRedCounter;
+        const isBlue = team === "blue";
+        if (isBlue) playerBlueCounter++;
+        else playerRedCounter++;
+        const id = isBlue ? "B" + playerBlueCounter : "R" + playerRedCounter;
 
-          let x = e.clientX - pitchRect.left;
-          let y = e.clientY - pitchRect.top;
-          x = Math.max(0, Math.min(pitchRect.width, x));
-          y = Math.max(0, Math.min(pitchRect.height, y));
+        const playerEl = document.createElement("div");
+        playerEl.className = "player " + team;
+        playerEl.dataset.id = id;
+        playerEl.dataset.team = team;
+        playerEl.textContent = isBlue ? playerBlueCounter : playerRedCounter;
 
-          pitch.appendChild(playerEl);
-          const half = PLAYER_RADIUS;
-          playerEl.style.left = (x - half) + "px";
-          playerEl.style.top = (y - half) + "px";
+        let x = e.clientX - pitchRect.left;
+        let y = e.clientY - pitchRect.top;
+        x = Math.max(0, Math.min(pitchRect.width, x));
+        y = Math.max(0, Math.min(pitchRect.height, y));
 
-          const xRel = x / pitchRect.width;
-          const yRel = y / pitchRect.height;
-          playersState.push({ id, team, xRel, yRel });
+        pitch.appendChild(playerEl);
+        const half = PLAYER_RADIUS;
+        playerEl.style.left = (x - half) + "px";
+        playerEl.style.top = (y - half) + "px";
 
-          setupPlayerDrag(playerEl);
-          setupClickHandlers(playerEl);
-          playerEl.classList.add("selected");
+        const xRel = x / pitchRect.width;
+        const yRel = y / pitchRect.height;
+        playersState.push({ id, team, xRel, yRel });
 
-          onPointerDownPlayer(new PointerEvent("pointerdown", {
-            clientX: e.clientX,
-            clientY: e.clientY,
-            pointerId: e.pointerId,
-            bubbles: true
-          }));
-        }
+        setupPlayerDrag(playerEl);
+        setupClickHandlers(playerEl);
+        playerEl.classList.add("selected");
+
+        playerEl.dispatchEvent(new PointerEvent("pointerdown", {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          pointerId: e.pointerId,
+          bubbles: true
+        }));
       });
     }
 
+    // Drag: mål-källa
     function setupGoalSourceDrag(sourceEl) {
       sourceEl.addEventListener("pointerdown", (e) => {
         clearSelectionHighlight();
         const pitchRect = pitch.getBoundingClientRect();
 
-        if (sourceEl === e.currentTarget) {
-          pushUndoState();
-          goalCounter++;
-          const id = "G" + goalCounter;
+        pushUndoState();
+        goalCounter++;
+        const id = "G" + goalCounter;
 
-          const goalEl = document.createElement("div");
-          goalEl.className = "goal";
-          goalEl.dataset.id = id;
+        const goalEl = document.createElement("div");
+        goalEl.className = "goal";
+        goalEl.dataset.id = id;
 
-          const label = document.createElement("span");
-          label.className = "goal-label";
-          label.textContent = "Mål";
-          goalEl.appendChild(label);
+        const label = document.createElement("span");
+        label.className = "goal-label";
+        label.textContent = "Mål";
+        goalEl.appendChild(label);
 
-          let x = e.clientX - pitchRect.left;
-          let y = e.clientY - pitchRect.top;
-          x = Math.max(0, Math.min(pitchRect.width, x));
-          y = Math.max(0, Math.min(pitchRect.height, y));
+        let x = e.clientX - pitchRect.left;
+        let y = e.clientY - pitchRect.top;
+        x = Math.max(0, Math.min(pitchRect.width, x));
+        y = Math.max(0, Math.min(pitchRect.height, y));
 
-          pitch.appendChild(goalEl);
-          goalEl.style.left = x + "px";
-          goalEl.style.top = y + "px";
-          goalEl.style.transform = "translate(-50%, -50%) rotate(0deg)";
+        pitch.appendChild(goalEl);
+        goalEl.style.left = x + "px";
+        goalEl.style.top = y + "px";
+        goalEl.style.transform = "translate(-50%, -50%) rotate(0deg)";
 
-          const xRel = x / pitchRect.width;
-          const yRel = y / pitchRect.height;
-          goalsState.push({ id, xRel, yRel, rotationDeg: 0 });
+        const xRel = x / pitchRect.width;
+        const yRel = y / pitchRect.height;
+        goalsState.push({ id, xRel, yRel, rotationDeg: 0 });
 
-          setupGoalDrag(goalEl);
+        setupGoalDrag(goalEl);
+        goalEl.classList.add("selected");
 
-          goalEl.classList.add("selected");
-
-          goalEl.dispatchEvent(new PointerEvent("pointerdown", {
-            clientX: e.clientX,
-            clientY: e.clientY,
-            pointerId: e.pointerId,
-            bubbles: true
-          }));
-        }
+        goalEl.dispatchEvent(new PointerEvent("pointerdown", {
+          clientX: e.clientX,
+          clientY: e.clientY,
+          pointerId: e.pointerId,
+          bubbles: true
+        }));
       });
     }
 
@@ -1007,9 +1019,7 @@
       const moveDist = pointerDownPos
         ? Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y)
         : 0;
-      if (moveDist > 10) {
-        pointerMovedTooMuch = true;
-      }
+      if (moveDist > 10) pointerMovedTooMuch = true;
 
       if (dragInfo.type === "player") {
         const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
@@ -1101,6 +1111,7 @@
           gState.xRel = x / pitchRect.width;
           gState.yRel = y / pitchRect.height;
         }
+
       } else if (dragInfo.type === "cone") {
         const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
 
@@ -1118,6 +1129,7 @@
           cState.xRel = x / pitchRect.width;
           cState.yRel = y / pitchRect.height;
         }
+
       } else if (dragInfo.type === "ball") {
         const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
 
@@ -1145,12 +1157,21 @@
 
         const rect = pitch.getBoundingClientRect();
         const minHeight = rect.width * 0.4;
-        const maxHeight = rect.width * 1.6;
+        const maxHeight = window.innerHeight - 80;
 
         newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
         pitch.style.height = newHeight + "px";
 
         updateRatioDisplay();
+        renderMidline();
+        renderCenterCircle();
+
+      } else if (dragInfo.type === "midline") {
+        const { startY, startRel, pitchRect } = dragInfo;
+        const dy = e.clientY - startY;
+        const newRel = Math.max(0, Math.min(1, startRel + dy / pitchRect.height));
+        midlineYRel = newRel;
+        renderMidline();
       }
     }
 
@@ -1209,13 +1230,13 @@
         dragInfo.el.releasePointerCapture(e.pointerId);
       } else if (dragInfo.type === "resize") {
         resizeHandle.releasePointerCapture(e.pointerId);
+      } else if (dragInfo.type === "midline") {
+        midlineEl.releasePointerCapture(e.pointerId);
       }
 
       dragInfo = null;
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
-
-      renderState();
     }
 
     function resolveOverlapsForPlayer(id, pitchRect) {
@@ -1354,31 +1375,24 @@
       }
     }
 
-    function addGoal() {
-      // inte längre använd – allt skapas via drag
+    function renderMidline() {
+      const rect = pitch.getBoundingClientRect();
+      const y = rect.height * midlineYRel;
+      midlineEl.style.top = y + "px";
     }
 
-    function clearGoals() {
-      // kan läggas till vid behov
+    function renderCenterCircle() {
+      const rect = pitch.getBoundingClientRect();
+      const r = rect.width * centerCircleRadiusRel;
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      centerCircleEl.style.width = (2 * r) + "px";
+      centerCircleEl.style.height = (2 * r) + "px";
+      centerCircleEl.style.left = (cx - r) + "px";
+      centerCircleEl.style.top = (cy - r) + "px";
     }
 
-    function clearCones() {
-      // kan läggas till vid behov
-    }
-
-    function renderState() {
-      const fullState = {
-        players: playersState,
-        goals: goalsState,
-        cones: conesState,
-        balls: ballsState,
-        drillSequences,
-        ballOwnerId,
-        ballTrailPoints
-      };
-      stateOutput.textContent = JSON.stringify(fullState, null, 2);
-    }
-
+    // UI-kontroller
     resizeHandle.addEventListener("pointerdown", (e) => {
       const rect = pitch.getBoundingClientRect();
       resizeHandle.setPointerCapture(e.pointerId);
@@ -1401,6 +1415,35 @@
       applyLinesClass();
     });
 
+    moveMidlineBtn.addEventListener("click", () => {
+      midlineMoveMode = !midlineMoveMode;
+      moveMidlineBtn.classList.toggle("selected", midlineMoveMode);
+    });
+
+    midlineEl.addEventListener("pointerdown", (e) => {
+      if (!midlineMoveMode) return;
+      const rect = pitch.getBoundingClientRect();
+      midlineEl.setPointerCapture(e.pointerId);
+      dragInfo = {
+        type: "midline",
+        startY: e.clientY,
+        startRel: midlineYRel,
+        pitchRect: rect
+      };
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    });
+
+    circleMinusBtn.addEventListener("click", () => {
+      centerCircleRadiusRel = Math.max(0.05, centerCircleRadiusRel - 0.02);
+      renderCenterCircle();
+    });
+
+    circlePlusBtn.addEventListener("click", () => {
+      centerCircleRadiusRel = Math.min(0.3, centerCircleRadiusRel + 0.02);
+      renderCenterCircle();
+    });
+
     setupConeDrag(coneSource);
     setupBallDrag(ballSource);
     setupPlayerSourceDrag(playerBlueSource, "blue");
@@ -1413,23 +1456,22 @@
 
     window.addEventListener("load", () => {
       setTimeout(() => {
-        initPitchHeight();
+        updateRatioDisplay();
         applyLinesClass();
-        renderState();
+        renderMidline();
+        renderCenterCircle();
       }, 100);
     });
 
     window.addEventListener("resize", () => {
-      const rect = pitch.getBoundingClientRect();
-      const currentRatio = rect.width / rect.height;
-      const newHeight = rect.width / currentRatio;
-      pitch.style.height = newHeight + "px";
       updateRatioDisplay();
       renderGoals();
       renderCones();
       renderBalls();
       renderAllSequencesPaths();
       renderBallTrail();
+      renderMidline();
+      renderCenterCircle();
     });
   </script>
 </body>
