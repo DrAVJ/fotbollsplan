@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Träningsplan – mål + spelare + konor</title>
+  <title>Träningsplan – mål, spelare, konor & bollar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -252,6 +252,37 @@
       pointer-events: auto;
     }
 
+    .ball-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 0 0 2px #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      color: #000;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      pointer-events: auto;
+    }
+
+    .ball {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 0 0 2px #000;
+      user-select: none;
+      touch-action: none;
+      cursor: grab;
+      pointer-events: auto;
+    }
+
     pre {
       margin-top: 16px;
       font-size: 0.75rem;
@@ -265,7 +296,7 @@
 </head>
 <body>
   <div class="wrapper">
-    <h1>Två lag – dragbar plan, mål, spelare & konor</h1>
+    <h1>Två lag – plan, mål, spelare, konor & bollar</h1>
 
     <div class="controls">
       <label for="blueCount">Blå:</label>
@@ -291,6 +322,8 @@
       <span style="margin-left:12px;">Konor:</span>
       <div id="coneSource" class="cone-icon">K</div>
       <button id="clearConesBtn">Ta bort alla konor</button>
+      <span style="margin-left:12px;">Bollar:</span>
+      <div id="ballSource" class="ball-icon">B</div>
       <button id="undoBtn">Ångra</button>
     </div>
 
@@ -316,12 +349,15 @@
     const clearGoalsBtn = document.getElementById("clearGoalsBtn");
     const coneSource = document.getElementById("coneSource");
     const clearConesBtn = document.getElementById("clearConesBtn");
+    const ballSource = document.getElementById("ballSource");
     const undoBtn = document.getElementById("undoBtn");
 
     let playersState = [];
     let goalsState = []; // { id, xRel, yRel, rotationDeg }
     let conesState = []; // { id, xRel, yRel }
+    let ballsState = []; // { id, xRel, yRel }
     let coneCounter = 0;
+    let ballCounter = 0;
     let dragInfo = null;
 
     const PLAYER_RADIUS = 16;
@@ -337,7 +373,8 @@
       const snapshot = JSON.parse(JSON.stringify({
         playersState,
         goalsState,
-        conesState
+        conesState,
+        ballsState
       }));
       undoStack.push(snapshot);
       if (undoStack.length > UNDO_LIMIT) {
@@ -349,14 +386,16 @@
       playersState = JSON.parse(JSON.stringify(snapshot.playersState));
       goalsState = JSON.parse(JSON.stringify(snapshot.goalsState));
       conesState = JSON.parse(JSON.stringify(snapshot.conesState));
+      ballsState = JSON.parse(JSON.stringify(snapshot.ballsState));
 
-      // Rensa DOM
       [...pitch.querySelectorAll(".player")].forEach(el => el.remove());
       [...pitch.querySelectorAll(".goal")].forEach(el => el.remove());
       [...pitch.querySelectorAll(".cone")].forEach(el => el.remove());
+      [...pitch.querySelectorAll(".ball")].forEach(el => el.remove());
 
-      // Återställ spelare
       const pitchRect = pitch.getBoundingClientRect();
+
+      // spelare
       for (const p of playersState) {
         const el = document.createElement("div");
         el.className = "player " + p.team;
@@ -371,9 +410,9 @@
         setupPlayerDrag(el);
       }
 
-      // Återställ mål + konor
       renderGoals();
       renderCones();
+      renderBalls();
       renderState();
     }
 
@@ -401,7 +440,6 @@
     }
 
     function createPlayers() {
-      // rensa spelare men inte mål/konor
       [...pitch.querySelectorAll(".player")].forEach(el => el.remove());
       playersState = [];
 
@@ -413,16 +451,15 @@
 
       const placed = [];
 
-      // ta hänsyn till befintliga mål och konor
+      // befintliga mål/konor/bollar som hinder initialt
       for (const g of goalsState) {
-        const gx = g.xRel * pitchRect.width;
-        const gy = g.yRel * pitchRect.height;
-        placed.push({ x: gx, y: gy });
+        placed.push({ x: g.xRel * pitchRect.width, y: g.yRel * pitchRect.height });
       }
       for (const c of conesState) {
-        const cx = c.xRel * pitchRect.width;
-        const cy = c.yRel * pitchRect.height;
-        placed.push({ x: cx, y: cy });
+        placed.push({ x: c.xRel * pitchRect.width, y: c.yRel * pitchRect.height });
+      }
+      for (const b of ballsState) {
+        placed.push({ x: b.xRel * pitchRect.width, y: b.yRel * pitchRect.height });
       }
 
       for (let i = 1; i <= blueCount; i++) {
@@ -540,7 +577,6 @@
 
     function setupGoalDrag(el) {
       el.addEventListener("pointerdown", (e) => {
-        // undvik drag när man trycker på rotate-knappen
         if (e.target.classList.contains("goal-rotate")) return;
 
         const target = el;
@@ -582,11 +618,14 @@
       el.addEventListener("pointerdown", onPointerDownCone);
     }
 
+    function setupBallDrag(el) {
+      el.addEventListener("pointerdown", onPointerDownBall);
+    }
+
     function onPointerDownCone(e) {
       const pitchRect = pitch.getBoundingClientRect();
       const source = e.currentTarget;
 
-      // Klick på käll-ikonen: skapa ny kona
       if (source.id === "coneSource") {
         pushUndoState();
         coneCounter++;
@@ -601,7 +640,6 @@
         y = Math.max(0, Math.min(pitchRect.height, y));
 
         pitch.appendChild(coneEl);
-        // efter append får vi korrekta offsetWidth/height
         const halfW = coneEl.offsetWidth / 2;
         const halfH = coneEl.offsetHeight / 2;
         coneEl.style.left = (x - halfW) + "px";
@@ -616,9 +654,45 @@
 
         startConeDrag(e, coneEl, id, pitchRect);
       } else {
-        // dra befintlig kona
         const id = source.dataset.id;
         startConeDrag(e, source, id, pitchRect);
+      }
+    }
+
+    function onPointerDownBall(e) {
+      const pitchRect = pitch.getBoundingClientRect();
+      const source = e.currentTarget;
+
+      if (source.id === "ballSource") {
+        pushUndoState();
+        ballCounter++;
+        const id = "BAll" + ballCounter;
+        const ballEl = document.createElement("div");
+        ballEl.className = "ball";
+        ballEl.dataset.id = id;
+
+        let x = e.clientX - pitchRect.left;
+        let y = e.clientY - pitchRect.top;
+        x = Math.max(0, Math.min(pitchRect.width, x));
+        y = Math.max(0, Math.min(pitchRect.height, y));
+
+        pitch.appendChild(ballEl);
+        const halfW = ballEl.offsetWidth / 2;
+        const halfH = ballEl.offsetHeight / 2;
+        ballEl.style.left = (x - halfW) + "px";
+        ballEl.style.top = (y - halfH) + "px";
+
+        const xRel = x / pitchRect.width;
+        const yRel = y / pitchRect.height;
+        ballsState.push({ id, xRel, yRel });
+
+        setupBallDrag(ballEl);
+        ballEl.addEventListener("dblclick", onBallDblClick);
+
+        startBallDrag(e, ballEl, id, pitchRect);
+      } else {
+        const id = source.dataset.id;
+        startBallDrag(e, source, id, pitchRect);
       }
     }
 
@@ -642,6 +716,26 @@
       window.addEventListener("pointerup", onPointerUp);
     }
 
+    function startBallDrag(e, el, id, pitchRect) {
+      e.stopPropagation();
+      el.setPointerCapture(e.pointerId);
+      el.classList.add("dragging");
+
+      const rect = el.getBoundingClientRect();
+
+      dragInfo = {
+        type: "ball",
+        id,
+        el,
+        offsetX: e.clientX - rect.left,
+        offsetY: e.clientY - rect.top,
+        pitchRect
+      };
+
+      window.addEventListener("pointermove", onPointerMove);
+      window.addEventListener("pointerup", onPointerUp);
+    }
+
     function onConeDblClick(e) {
       e.stopPropagation();
       const el = e.currentTarget;
@@ -650,6 +744,18 @@
       if (idx === -1) return;
       pushUndoState();
       conesState.splice(idx, 1);
+      el.remove();
+      renderState();
+    }
+
+    function onBallDblClick(e) {
+      e.stopPropagation();
+      const el = e.currentTarget;
+      const id = el.dataset.id;
+      const idx = ballsState.findIndex(b => b.id === id);
+      if (idx === -1) return;
+      pushUndoState();
+      ballsState.splice(idx, 1);
       el.remove();
       renderState();
     }
@@ -708,6 +814,23 @@
           cState.xRel = x / pitchRect.width;
           cState.yRel = y / pitchRect.height;
         }
+      } else if (dragInfo.type === "ball") {
+        const { el, offsetX, offsetY, pitchRect, id } = dragInfo;
+
+        let x = e.clientX - pitchRect.left - offsetX + el.offsetWidth / 2;
+        let y = e.clientY - pitchRect.top - offsetY + el.offsetHeight / 2;
+
+        x = Math.max(0, Math.min(pitchRect.width, x));
+        y = Math.max(0, Math.min(pitchRect.height, y));
+
+        el.style.left = (x - el.offsetWidth / 2) + "px";
+        el.style.top = (y - el.offsetHeight / 2) + "px";
+
+        const bState = ballsState.find(b => b.id === id);
+        if (bState) {
+          bState.xRel = x / pitchRect.width;
+          bState.yRel = y / pitchRect.height;
+        }
       } else if (dragInfo.type === "resize") {
         const { startY, startHeight } = dragInfo;
         const dy = e.clientY - startY;
@@ -731,12 +854,14 @@
         const { pitchRect, id, el } = dragInfo;
         el.classList.remove("dragging");
         el.releasePointerCapture(e.pointerId);
-
         resolveOverlapsForPlayer(id, pitchRect);
       } else if (dragInfo.type === "goal") {
         dragInfo.el.classList.remove("dragging");
         dragInfo.el.releasePointerCapture(e.pointerId);
       } else if (dragInfo.type === "cone") {
+        dragInfo.el.classList.remove("dragging");
+        dragInfo.el.releasePointerCapture(e.pointerId);
+      } else if (dragInfo.type === "ball") {
         dragInfo.el.classList.remove("dragging");
         dragInfo.el.releasePointerCapture(e.pointerId);
       } else if (dragInfo.type === "resize") {
@@ -852,6 +977,30 @@
       }
     }
 
+    function renderBalls() {
+      [...pitch.querySelectorAll(".ball")].forEach(el => el.remove());
+      const pitchRect = pitch.getBoundingClientRect();
+
+      for (const b of ballsState) {
+        const el = document.createElement("div");
+        el.className = "ball";
+        el.dataset.id = b.id;
+
+        const x = b.xRel * pitchRect.width;
+        const y = b.yRel * pitchRect.height;
+
+        const halfW = el.offsetWidth / 2 || 11;
+        const halfH = el.offsetHeight / 2 || 11;
+
+        el.style.left = (x - halfW) + "px";
+        el.style.top = (y - halfH) + "px";
+
+        pitch.appendChild(el);
+        setupBallDrag(el);
+        el.addEventListener("dblclick", onBallDblClick);
+      }
+    }
+
     function addGoal() {
       if (goalsState.length >= MAX_GOALS) return;
       pushUndoState();
@@ -891,7 +1040,8 @@
       const fullState = {
         players: playersState,
         goals: goalsState,
-        cones: conesState
+        cones: conesState,
+        balls: ballsState
       };
       stateOutput.textContent = JSON.stringify(fullState, null, 2);
     }
@@ -913,6 +1063,7 @@
       createPlayers();
       renderGoals();
       renderCones();
+      renderBalls();
     });
 
     logStateBtn.addEventListener("click", renderState);
@@ -930,6 +1081,7 @@
     });
 
     setupConeDrag(coneSource);
+    setupBallDrag(ballSource);
 
     window.addEventListener("load", () => {
       setTimeout(() => {
@@ -938,6 +1090,7 @@
         createPlayers();
         renderGoals();
         renderCones();
+        renderBalls();
       }, 100);
     });
 
@@ -949,6 +1102,7 @@
       updateRatioDisplay();
       renderGoals();
       renderCones();
+      renderBalls();
     });
   </script>
 </body>
