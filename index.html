@@ -112,10 +112,6 @@
       pointer-events: none;
     }
 
-    .pitch.show-lines {
-      /* mittlinje & cirkel hanteras nu av egna element */
-    }
-
     .pitch-resize-handle {
       position: absolute;
       left: 50%;
@@ -341,6 +337,8 @@
       <button id="moveMidlineBtn">Flytta mittlinje</button>
       <button id="circleMinus">- cirkel</button>
       <button id="circlePlus">+ cirkel</button>
+      <button id="playAllBtn">Spela upp</button>
+      <button id="stopPlayBtn">Stoppa</button>
     </div>
 
     <div class="palette">
@@ -393,6 +391,8 @@
     const moveMidlineBtn = document.getElementById("moveMidlineBtn");
     const circleMinusBtn = document.getElementById("circleMinus");
     const circlePlusBtn = document.getElementById("circlePlus");
+    const playAllBtn = document.getElementById("playAllBtn");
+    const stopPlayBtn = document.getElementById("stopPlayBtn");
 
     const playerBlueSource = document.getElementById("playerBlueSource");
     const playerRedSource = document.getElementById("playerRedSource");
@@ -440,6 +440,11 @@
     let midlineYRel = 0.5;
     let midlineMoveMode = false;
     let centerCircleRadiusRel = 0.15;
+
+    // Playback
+    let isPlaying = false;
+    let playbackStartTime = 0;
+    let playbackRequestId = null;
 
     function pushUndoState() {
       const snapshot = JSON.parse(JSON.stringify({
@@ -510,11 +515,9 @@
 
     function applyLinesClass() {
       if (showLinesCheckbox.checked) {
-        pitch.classList.add("show-lines");
         midlineEl.style.display = "";
         centerCircleEl.style.display = "";
       } else {
-        pitch.classList.remove("show-lines");
         midlineEl.style.display = "none";
         centerCircleEl.style.display = "none";
       }
@@ -1172,6 +1175,7 @@
         const newRel = Math.max(0, Math.min(1, startRel + dy / pitchRect.height));
         midlineYRel = newRel;
         renderMidline();
+        renderCenterCircle(); // cirkeln följer mittlinjen
       }
     }
 
@@ -1385,12 +1389,74 @@
       const rect = pitch.getBoundingClientRect();
       const r = rect.width * centerCircleRadiusRel;
       const cx = rect.width / 2;
-      const cy = rect.height / 2;
+      const cy = rect.height * midlineYRel; // följer mittlinjen
       centerCircleEl.style.width = (2 * r) + "px";
       centerCircleEl.style.height = (2 * r) + "px";
       centerCircleEl.style.left = (cx - r) + "px";
       centerCircleEl.style.top = (cy - r) + "px";
     }
+
+    // Playback
+    function playbackLoop() {
+      if (!isPlaying) return;
+
+      const now = performance.now();
+      const tSec = (now - playbackStartTime) / 1000;
+      const pitchRect = pitch.getBoundingClientRect();
+
+      for (const seq of drillSequences) {
+        if (!seq.points || seq.points.length < 2) continue;
+
+        const pts = seq.points;
+        const t0 = pts[0].t;
+        const tEnd = pts[pts.length - 1].t;
+        const totalDur = tEnd - t0 || 0.001;
+        const localT = t0 + (tSec % totalDur);
+
+        let i = 0;
+        while (i < pts.length - 1 && pts[i + 1].t < localT) i++;
+
+        const pA = pts[i];
+        const pB = pts[Math.min(i + 1, pts.length - 1)];
+
+        const span = (pB.t - pA.t) || 1e-6;
+        const u = Math.max(0, Math.min(1, (localT - pA.t) / span));
+
+        const xRel = pA.xRel + (pB.xRel - pA.xRel) * u;
+        const yRel = pA.yRel + (pB.yRel - pA.yRel) * u;
+
+        const x = xRel * pitchRect.width;
+        const y = yRel * pitchRect.height;
+
+        const playerEl = [...pitch.querySelectorAll(".player")]
+          .find(el => el.dataset.id === seq.actorId);
+        if (playerEl) {
+          playerEl.style.left = (x - PLAYER_RADIUS) + "px";
+          playerEl.style.top = (y - PLAYER_RADIUS) + "px";
+        }
+
+        const pState = playersState.find(p => p.id === seq.actorId);
+        if (pState) {
+          pState.xRel = xRel;
+          pState.yRel = yRel;
+        }
+      }
+
+      playbackRequestId = requestAnimationFrame(playbackLoop);
+    }
+
+    playAllBtn.addEventListener("click", () => {
+      if (!drillSequences.length) return;
+      isPlaying = true;
+      playbackStartTime = performance.now();
+      cancelLongPressTimer();
+      playbackLoop();
+    });
+
+    stopPlayBtn.addEventListener("click", () => {
+      isPlaying = false;
+      if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
+    });
 
     // UI-kontroller
     resizeHandle.addEventListener("pointerdown", (e) => {
