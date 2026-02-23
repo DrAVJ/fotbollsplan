@@ -136,6 +136,7 @@
       overflow: visible;
       touch-action: none;
       clip-path: inset(0 -100px -100px -100px);
+      pointer-events: auto;
     }
 
     .pitch-line {
@@ -789,167 +790,68 @@
       e.preventDefault();
       e.stopPropagation();
 
-      const rect = iconElement.getBoundingClientRect();
-      dragStartX = e.clientX || (e.touches && e.touches[0].clientX);
-      dragStartY = e.clientY || (e.touches && e.touches[0].clientY);
       currentDragType = type;
-
+      const touch = e.touches ? e.touches[0] : e;
+      
       draggingIcon = document.createElement('div');
       draggingIcon.className = 'dragging-icon';
       draggingIcon.textContent = iconElement.textContent;
-      draggingIcon.style.left = rect.left + 'px';
-      draggingIcon.style.top = rect.top + 'px';
+      draggingIcon.style.left = touch.clientX + 'px';
+      draggingIcon.style.top = touch.clientY + 'px';
       document.body.appendChild(draggingIcon);
 
       iconElement.style.opacity = '0.3';
 
-      document.addEventListener('mousemove', onIconDragMove);
-      document.addEventListener('mouseup', onIconDragEnd);
-      document.addEventListener('touchmove', onIconDragMove);
-      document.addEventListener('touchend', onIconDragEnd);
-    }
+      const moveHandler = (moveEvent) => {
+        const moveTouch = moveEvent.touches ? moveEvent.touches[0] : moveEvent;
+        draggingIcon.style.left = moveTouch.clientX + 'px';
+        draggingIcon.style.top = moveTouch.clientY + 'px';
+      };
 
-    function onIconDragMove(e) {
-      if (!draggingIcon) return;
-      e.preventDefault();
+      const endHandler = (endEvent) => {
+        const endTouch = endEvent.changedTouches ? endEvent.changedTouches[0] : endEvent;
+        const pitchRect = pitch.getBoundingClientRect();
 
-      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        if (endTouch.clientX >= pitchRect.left && endTouch.clientX <= pitchRect.right &&
+            endTouch.clientY >= pitchRect.top && endTouch.clientY <= pitchRect.bottom) {
+          
+          const x = endTouch.clientX - pitchRect.left;
+          const y = endTouch.clientY - pitchRect.top;
 
-      const dx = clientX - dragStartX;
-      const dy = clientY - dragStartY;
-
-      draggingIcon.style.left = (dragStartX + dx) + 'px';
-      draggingIcon.style.top = (dragStartY + dy) + 'px';
-    }
-
-    function onIconDragEnd(e) {
-      if (!draggingIcon) return;
-      e.preventDefault();
-
-      const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
-      const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
-
-      const pitchRect = pitch.getBoundingClientRect();
-
-      if (clientX >= pitchRect.left && clientX <= pitchRect.right &&
-          clientY >= pitchRect.top && clientY <= pitchRect.bottom) {
-        
-        const x = clientX - pitchRect.left;
-        const y = clientY - pitchRect.top;
-
-        if (currentDragType === 'player-left') {
-          createPlayer(`L${++playerCounter}`, 'left', x, y, playerCounter);
-        } else if (currentDragType === 'player-right') {
-          createPlayer(`R${++playerCounter}`, 'right', x, y, playerCounter);
-        } else if (currentDragType === 'cone') {
-          createCone(`C${++coneCounter}`, x, y);
-        } else if (currentDragType === 'ball') {
-          createBall(`B${balls.length + 1}`, x, y);
-        } else if (currentDragType === 'goal-left') {
-          createGoal(`GL${++goalCounter}`, 'left', x, y);
-        } else if (currentDragType === 'goal-right') {
-          createGoal(`GR${++goalCounter}`, 'right', x, y);
+          if (currentDragType === 'player-left') {
+            createPlayer(`L${++playerCounter}`, 'left', x, y, playerCounter);
+          } else if (currentDragType === 'player-right') {
+            createPlayer(`R${++playerCounter}`, 'right', x, y, playerCounter);
+          } else if (currentDragType === 'cone') {
+            createCone(`C${++coneCounter}`, x, y);
+          } else if (currentDragType === 'ball') {
+            createBall(`B${balls.length + 1}`, x, y);
+          } else if (currentDragType === 'goal-left') {
+            createGoal(`GL${++goalCounter}`, 'left', x, y);
+          } else if (currentDragType === 'goal-right') {
+            createGoal(`GR${++goalCounter}`, 'right', x, y);
+          }
         }
-      }
 
-      document.body.removeChild(draggingIcon);
-      draggingIcon = null;
-      currentDragType = null;
+        document.body.removeChild(draggingIcon);
+        draggingIcon = null;
+        currentDragType = null;
+        iconElement.style.opacity = '1';
 
-      const toolbarIcons = document.querySelectorAll('.toolbar-icon');
-      toolbarIcons.forEach(icon => icon.style.opacity = '1');
+        document.removeEventListener('mousemove', moveHandler);
+        document.removeEventListener('mouseup', endHandler);
+        document.removeEventListener('touchmove', moveHandler);
+        document.removeEventListener('touchend', endHandler);
+      };
 
-      document.removeEventListener('mousemove', onIconDragMove);
-      document.removeEventListener('mouseup', onIconDragEnd);
-      document.removeEventListener('touchmove', onIconDragMove);
-      document.removeEventListener('touchend', onIconDragEnd);
+      document.addEventListener('mousemove', moveHandler, { passive: false });
+      document.addEventListener('mouseup', endHandler);
+      document.addEventListener('touchmove', moveHandler, { passive: false });
+      document.addEventListener('touchend', endHandler);
     }
 
     function setupIconDragDrop() {
-      pitch.addEventListener('dragover', e => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
-      });
-
-      pitch.addEventListener('drop', e => {
-        e.preventDefault();
-        const type = e.dataTransfer.getData('type');
-        const pitchRect = pitch.getBoundingClientRect();
-        const x = e.clientX - pitchRect.left;
-        const y = e.clientY - pitchRect.top;
-
-        if (type === 'player-left') {
-          createPlayer(`L${++playerCounter}`, 'left', x, y, playerCounter);
-        } else if (type === 'player-right') {
-          createPlayer(`R${++playerCounter}`, 'right', x, y, playerCounter);
-        } else if (type === 'cone') {
-          createCone(`C${++coneCounter}`, x, y);
-        } else if (type === 'ball') {
-          createBall(`B${balls.length + 1}`, x, y);
-        } else if (type === 'goal-left') {
-          createGoal(`GL${++goalCounter}`, 'left', x, y);
-        } else if (type === 'goal-right') {
-          createGoal(`GR${++goalCounter}`, 'right', x, y);
-        }
-      });
-
-      pitch.addEventListener('touchmove', e => {
-        e.preventDefault();
-      }, { passive: false });
-
-      const toolbarIcons = document.querySelectorAll('.toolbar-icon');
-      toolbarIcons.forEach(icon => {
-        let touchStartX, touchStartY;
-        
-        icon.addEventListener('touchstart', e => {
-          const touch = e.touches[0];
-          touchStartX = touch.clientX;
-          touchStartY = touch.clientY;
-          icon.style.opacity = '0.5';
-        });
-
-        icon.addEventListener('touchmove', e => {
-          e.preventDefault();
-          const touch = e.touches[0];
-          const dx = Math.abs(touch.clientX - touchStartX);
-          const dy = Math.abs(touch.clientY - touchStartY);
-          
-          if (dx > 10 || dy > 10) {
-            icon.style.opacity = '0.3';
-          }
-        }, { passive: false });
-
-        icon.addEventListener('touchend', e => {
-          e.preventDefault();
-          icon.style.opacity = '1';
-          
-          const touch = e.changedTouches[0];
-          const pitchRect = pitch.getBoundingClientRect();
-          
-          if (touch.clientX >= pitchRect.left && touch.clientX <= pitchRect.right &&
-              touch.clientY >= pitchRect.top && touch.clientY <= pitchRect.bottom) {
-            
-            const x = touch.clientX - pitchRect.left;
-            const y = touch.clientY - pitchRect.top;
-            const type = icon.parentElement.dataset.type;
-
-            if (type === 'player-left') {
-              createPlayer(`L${++playerCounter}`, 'left', x, y, playerCounter);
-            } else if (type === 'player-right') {
-              createPlayer(`R${++playerCounter}`, 'right', x, y, playerCounter);
-            } else if (type === 'cone') {
-              createCone(`C${++coneCounter}`, x, y);
-            } else if (type === 'ball') {
-              createBall(`B${balls.length + 1}`, x, y);
-            } else if (type === 'goal-left') {
-              createGoal(`GL${++goalCounter}`, 'left', x, y);
-            } else if (type === 'goal-right') {
-              createGoal(`GR${++goalCounter}`, 'right', x, y);
-            }
-          }
-        });
-      });
+      // Ingen extra setup behövs, allt sköts av startIconDrag
     }
 
     function createPlayer(id, side, x, y, num) {
@@ -1583,6 +1485,34 @@
     }
 
     init();
+  
+  function init() {
+  updatePlayers();
+  setupIconDragDrop();
+  setupResize();
+
+  // Lägg till en test‑spelare och en boll mitt på planen
+  const rect = pitch.getBoundingClientRect();
+  createPlayer('L1', 'left', rect.width * 0.3, rect.height * 0.5, 1);
+  createBall('B1', rect.width * 0.5, rect.height * 0.5);
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' && !spacePressed) {
+      e.preventDefault();
+      spacePressed = true;
+    }
+  });
+
+  document.addEventListener('keyup', e => {
+    if (e.code === 'Space') {
+      spacePressed = false;
+      if (ballTraceActive) {
+        ballTraceActive = null;
+      }
+    }
+  });
+}
+
   </script>
 </body>
 </html>
