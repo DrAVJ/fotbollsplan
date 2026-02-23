@@ -787,68 +787,79 @@
     }
 
     function startIconDrag(e, type, iconElement) {
-      e.preventDefault();
-      e.stopPropagation();
+  e.preventDefault();
+  e.stopPropagation();
 
-      currentDragType = type;
-      const touch = e.touches ? e.touches[0] : e;
-      
-      draggingIcon = document.createElement('div');
-      draggingIcon.className = 'dragging-icon';
-      draggingIcon.textContent = iconElement.textContent;
-      draggingIcon.style.left = touch.clientX + 'px';
-      draggingIcon.style.top = touch.clientY + 'px';
-      document.body.appendChild(draggingIcon);
+  // stöd både mus och touch
+  const point = e.touches ? e.touches[0] : e;
+  currentDragType = type;
 
-      iconElement.style.opacity = '0.3';
+  // skapa “spök‑ikon”
+  draggingIcon = document.createElement('div');
+  draggingIcon.className = 'dragging-icon';
+  draggingIcon.textContent = iconElement.textContent;
+  draggingIcon.style.left = point.clientX + 'px';
+  draggingIcon.style.top = point.clientY + 'px';
+  document.body.appendChild(draggingIcon);
 
-      const moveHandler = (moveEvent) => {
-        const moveTouch = moveEvent.touches ? moveEvent.touches[0] : moveEvent;
-        draggingIcon.style.left = moveTouch.clientX + 'px';
-        draggingIcon.style.top = moveTouch.clientY + 'px';
-      };
+  iconElement.style.opacity = '0.3';
 
-      const endHandler = (endEvent) => {
-        const endTouch = endEvent.changedTouches ? endEvent.changedTouches[0] : endEvent;
-        const pitchRect = pitch.getBoundingClientRect();
+  // lyssna globalt under drag
+  window.addEventListener('pointermove', onIconDragMove);
+  window.addEventListener('pointerup', onIconDragEnd);
+}
 
-        if (endTouch.clientX >= pitchRect.left && endTouch.clientX <= pitchRect.right &&
-            endTouch.clientY >= pitchRect.top && endTouch.clientY <= pitchRect.bottom) {
-          
-          const x = endTouch.clientX - pitchRect.left;
-          const y = endTouch.clientY - pitchRect.top;
+function onIconDragMove(e) {
+  if (!draggingIcon) return;
+  e.preventDefault();
 
-          if (currentDragType === 'player-left') {
-            createPlayer(`L${++playerCounter}`, 'left', x, y, playerCounter);
-          } else if (currentDragType === 'player-right') {
-            createPlayer(`R${++playerCounter}`, 'right', x, y, playerCounter);
-          } else if (currentDragType === 'cone') {
-            createCone(`C${++coneCounter}`, x, y);
-          } else if (currentDragType === 'ball') {
-            createBall(`B${balls.length + 1}`, x, y);
-          } else if (currentDragType === 'goal-left') {
-            createGoal(`GL${++goalCounter}`, 'left', x, y);
-          } else if (currentDragType === 'goal-right') {
-            createGoal(`GR${++goalCounter}`, 'right', x, y);
-          }
-        }
+  const point = e; // pointerevent har clientX/Y direkt
+  draggingIcon.style.left = point.clientX + 'px';
+  draggingIcon.style.top = point.clientY + 'px';
+}
 
-        document.body.removeChild(draggingIcon);
-        draggingIcon = null;
-        currentDragType = null;
-        iconElement.style.opacity = '1';
+function onIconDragEnd(e) {
+  if (!draggingIcon) return;
+  e.preventDefault();
 
-        document.removeEventListener('mousemove', moveHandler);
-        document.removeEventListener('mouseup', endHandler);
-        document.removeEventListener('touchmove', moveHandler);
-        document.removeEventListener('touchend', endHandler);
-      };
+  const point = e;
+  const clientX = point.clientX;
+  const clientY = point.clientY;
 
-      document.addEventListener('mousemove', moveHandler, { passive: false });
-      document.addEventListener('mouseup', endHandler);
-      document.addEventListener('touchmove', moveHandler, { passive: false });
-      document.addEventListener('touchend', endHandler);
+  const pitchRect = pitch.getBoundingClientRect();
+
+  if (clientX >= pitchRect.left && clientX <= pitchRect.right &&
+      clientY >= pitchRect.top && clientY <= pitchRect.bottom) {
+
+    const x = clientX - pitchRect.left;
+    const y = clientY - pitchRect.top;
+
+    if (currentDragType === 'player-left') {
+      createPlayer(`L${++playerCounter}`, 'left', x, y, playerCounter);
+    } else if (currentDragType === 'player-right') {
+      createPlayer(`R${++playerCounter}`, 'right', x, y, playerCounter);
+    } else if (currentDragType === 'cone') {
+      createCone(`C${++coneCounter}`, x, y);
+    } else if (currentDragType === 'ball') {
+      createBall(`B${balls.length + 1}`, x, y);
+    } else if (currentDragType === 'goal-left') {
+      createGoal(`GL${++goalCounter}`, 'left', x, y);
+    } else if (currentDragType === 'goal-right') {
+      createGoal(`GR${++goalCounter}`, 'right', x, y);
     }
+  }
+
+  document.body.removeChild(draggingIcon);
+  draggingIcon = null;
+  currentDragType = null;
+
+  const toolbarIcons = document.querySelectorAll('.toolbar-icon');
+  toolbarIcons.forEach(icon => icon.style.opacity = '1');
+
+  window.removeEventListener('pointermove', onIconDragMove);
+  window.removeEventListener('pointerup', onIconDragEnd);
+}
+
 
     function setupIconDragDrop() {
       // Ingen extra setup behövs, allt sköts av startIconDrag
