@@ -16,7 +16,6 @@
       background: #1a1a1a;
       color: #e0e0e0;
       padding: 16px;
-      overflow: hidden;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
@@ -528,10 +527,11 @@
     }
 
     .toolbar-icon {
-      font-size: 1.8rem;
-      pointer-events: none;
-      
+  font-size: 1.8rem;
+  /* pointer-events: none;  ← TA BORT */
+  user-select: none;
     }
+
 
     .dragging-icon {
       position: fixed;
@@ -599,6 +599,7 @@
          onpointerdown="startIconDrag(event, 'goal-right', this)">🥅</div>
   </div>
 </div>
+
 
 
     <div class="main-layout">
@@ -792,30 +793,22 @@
     let dragStartY = 0;
     let currentDragType = null;
 
-    function startToolbarDrag(e, type) {
-      e.dataTransfer.effectAllowed = 'copy';
-      e.dataTransfer.setData('type', type);
-    }
-
-    function startIconDrag(e, type, iconElement) {
+   function startIconDrag(e, type, iconElement) {
   e.preventDefault();
   e.stopPropagation();
 
-  // stöd både mus och touch
-  const point = e.touches ? e.touches[0] : e;
   currentDragType = type;
 
-  // skapa “spök‑ikon”
+  // Skapa spök-ikon
   draggingIcon = document.createElement('div');
   draggingIcon.className = 'dragging-icon';
   draggingIcon.textContent = iconElement.textContent;
-  draggingIcon.style.left = point.clientX + 'px';
-  draggingIcon.style.top = point.clientY + 'px';
+  draggingIcon.style.left = e.clientX + 'px';
+  draggingIcon.style.top = e.clientY + 'px';
   document.body.appendChild(draggingIcon);
 
   iconElement.style.opacity = '0.3';
 
-  // lyssna globalt under drag
   window.addEventListener('pointermove', onIconDragMove);
   window.addEventListener('pointerup', onIconDragEnd);
 }
@@ -824,19 +817,16 @@ function onIconDragMove(e) {
   if (!draggingIcon) return;
   e.preventDefault();
 
-  const point = e; // pointerevent har clientX/Y direkt
-  draggingIcon.style.left = point.clientX + 'px';
-  draggingIcon.style.top = point.clientY + 'px';
+  draggingIcon.style.left = e.clientX + 'px';
+  draggingIcon.style.top = e.clientY + 'px';
 }
 
 function onIconDragEnd(e) {
   if (!draggingIcon) return;
   e.preventDefault();
 
-  const point = e;
-  const clientX = point.clientX;
-  const clientY = point.clientY;
-
+  const clientX = e.clientX;
+  const clientY = e.clientY;
   const pitchRect = pitch.getBoundingClientRect();
 
   if (clientX >= pitchRect.left && clientX <= pitchRect.right &&
