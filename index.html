@@ -16,7 +16,11 @@
       background: #1a1a1a;
       color: #e0e0e0;
       padding: 16px;
-      overflow-x: hidden;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
     }
 
     .container {
@@ -158,12 +162,13 @@
 
     #pitch {
       position: relative;
-      width: 400px;
-      height: 600px;
+      width: 70vw;
+      height: 70vh;
       background: linear-gradient(180deg, #2d5f3f 0%, #1f4d2f 100%);
       border: 3px solid #fff;
       border-radius: 8px;
       overflow: visible;
+      touch-action: none;
     }
 
     .pitch-line {
@@ -273,25 +278,14 @@
       position: absolute;
       width: 0;
       height: 0;
-      border-left: 10px solid transparent;
-      border-right: 10px solid transparent;
-      border-bottom: 24px solid #ffd700;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-bottom: 20px solid #ffd700;
       cursor: grab;
       user-select: none;
-      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
       z-index: 10;
-      transform-origin: center bottom;
-    }
-
-    .cone::before {
-      content: '';
-      position: absolute;
-      left: 50%;
-      bottom: 0;
-      width: 16px;
-      height: 3px;
-      background: #ff6b00;
-      transform: translateX(-50%);
+      transform-origin: center center;
+      touch-action: none;
     }
 
     .cone:active {
@@ -482,14 +476,17 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       gap: 4px;
-      padding: 8px 12px;
+      padding: 12px;
       background: #333;
       border: 2px solid #444;
       border-radius: 6px;
       cursor: move;
       transition: all 0.2s;
-      min-width: 60px;
+      min-width: 50px;
+      min-height: 50px;
+      touch-action: none;
     }
 
     .toolbar-item:hover {
@@ -499,13 +496,11 @@
     }
 
     .toolbar-icon {
-      font-size: 1.5rem;
+      font-size: 2rem;
     }
 
     .toolbar-label {
-      font-size: 0.7rem;
-      color: #bbb;
-      text-align: center;
+      display: none;
     }
 
     @media (max-width: 900px) {
@@ -539,27 +534,21 @@
     <div class="toolbar">
       <div class="toolbar-item" draggable="true" data-type="player-left" ondragstart="startToolbarDrag(event, 'player-left')">
         <div class="toolbar-icon">🔵</div>
-        <div class="toolbar-label">Lag 1</div>
       </div>
       <div class="toolbar-item" draggable="true" data-type="player-right" ondragstart="startToolbarDrag(event, 'player-right')">
         <div class="toolbar-icon">🔴</div>
-        <div class="toolbar-label">Lag 2</div>
       </div>
       <div class="toolbar-item" draggable="true" data-type="cone" ondragstart="startToolbarDrag(event, 'cone')">
-        <div class="toolbar-icon">🔶</div>
-        <div class="toolbar-label">Kon</div>
+        <div class="toolbar-icon">🔺</div>
       </div>
       <div class="toolbar-item" draggable="true" data-type="ball" ondragstart="startToolbarDrag(event, 'ball')">
         <div class="toolbar-icon">⚽</div>
-        <div class="toolbar-label">Boll</div>
       </div>
       <div class="toolbar-item" draggable="true" data-type="goal-left" ondragstart="startToolbarDrag(event, 'goal-left')">
         <div class="toolbar-icon">🥅</div>
-        <div class="toolbar-label">Mål V</div>
       </div>
       <div class="toolbar-item" draggable="true" data-type="goal-right" ondragstart="startToolbarDrag(event, 'goal-right')">
         <div class="toolbar-icon">🥅</div>
-        <div class="toolbar-label">Mål H</div>
       </div>
     </div>
 
@@ -766,6 +755,63 @@
           createGoal(`GR${++goalCounter}`, 'right', x, y);
         }
       });
+
+      pitch.addEventListener('touchmove', e => {
+        e.preventDefault();
+      }, { passive: false });
+
+      const toolbarItems = document.querySelectorAll('.toolbar-item');
+      toolbarItems.forEach(item => {
+        let touchStartX, touchStartY;
+        
+        item.addEventListener('touchstart', e => {
+          const touch = e.touches[0];
+          touchStartX = touch.clientX;
+          touchStartY = touch.clientY;
+          item.style.opacity = '0.5';
+        });
+
+        item.addEventListener('touchmove', e => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const dx = Math.abs(touch.clientX - touchStartX);
+          const dy = Math.abs(touch.clientY - touchStartY);
+          
+          if (dx > 10 || dy > 10) {
+            item.style.opacity = '0.3';
+          }
+        }, { passive: false });
+
+        item.addEventListener('touchend', e => {
+          e.preventDefault();
+          item.style.opacity = '1';
+          
+          const touch = e.changedTouches[0];
+          const pitchRect = pitch.getBoundingClientRect();
+          
+          if (touch.clientX >= pitchRect.left && touch.clientX <= pitchRect.right &&
+              touch.clientY >= pitchRect.top && touch.clientY <= pitchRect.bottom) {
+            
+            const x = touch.clientX - pitchRect.left;
+            const y = touch.clientY - pitchRect.top;
+            const type = item.dataset.type;
+
+            if (type === 'player-left') {
+              createPlayer(`L${++playerCounter}`, 'left', x, y, playerCounter);
+            } else if (type === 'player-right') {
+              createPlayer(`R${++playerCounter}`, 'right', x, y, playerCounter);
+            } else if (type === 'cone') {
+              createCone(`C${++coneCounter}`, x, y);
+            } else if (type === 'ball') {
+              createBall(`B${balls.length + 1}`, x, y);
+            } else if (type === 'goal-left') {
+              createGoal(`GL${++goalCounter}`, 'left', x, y);
+            } else if (type === 'goal-right') {
+              createGoal(`GR${++goalCounter}`, 'right', x, y);
+            }
+          }
+        });
+      });
     }
 
     function createPlayer(id, side, x, y, num) {
@@ -803,7 +849,7 @@
       const el = document.createElement('div');
       el.className = 'cone';
       el.id = id;
-      el.style.left = (x - 8) + 'px';
+      el.style.left = (x - 12) + 'px';
       el.style.top = (y - 10) + 'px';
       pitch.appendChild(el);
 
@@ -912,7 +958,7 @@
 
       el.setPointerCapture(e.pointerId);
 
-      const radius = type === 'ball' ? 10 : type === 'cone' ? 8 : type === 'goal' ? 30 : 18;
+      const radius = type === 'ball' ? 10 : type === 'cone' ? 12 : type === 'goal' ? 30 : 18;
 
       dragInfo = {
         obj,
