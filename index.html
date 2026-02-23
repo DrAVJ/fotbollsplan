@@ -114,40 +114,6 @@
       align-items: flex-start;
     }
 
-    .left-panel {
-      width: 100px;
-      flex-shrink: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .icon-box {
-      background: #2a2a2a;
-      border: 2px solid #444;
-      border-radius: 8px;
-      padding: 12px;
-      text-align: center;
-      cursor: move;
-      transition: all 0.2s;
-    }
-
-    .icon-box:hover {
-      background: #333;
-      border-color: #555;
-    }
-
-    .icon-box .icon {
-      font-size: 2rem;
-      margin-bottom: 4px;
-    }
-
-    .icon-box .label {
-      font-size: 0.75rem;
-      color: #bbb;
-      line-height: 1.2;
-    }
-
     .pitch-container {
       flex: 1;
       min-width: 0;
@@ -169,6 +135,7 @@
       border-radius: 8px;
       overflow: visible;
       touch-action: none;
+      clip-path: inset(0 -100px -100px -100px);
     }
 
     .pitch-line {
@@ -336,7 +303,7 @@
       cursor: grab;
       user-select: none;
       border: 1px solid rgba(0, 0, 0, 0.2);
-      z-index: 15;
+      z-index: 50;
     }
 
     .ball:active {
@@ -363,28 +330,75 @@
     }
 
     .sidebar {
-      width: 260px;
+      width: 80px;
       flex-shrink: 0;
+      display: block;
     }
 
     .rec-panel {
+      position: fixed;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
       background: #2a2a2a;
-      border: 1px solid #444;
-      border-radius: 6px;
-      padding: 12px;
-      position: sticky;
-      top: 16px;
+      border: 2px solid #444;
+      border-radius: 8px;
+      padding: 16px;
+      max-width: 350px;
+      max-height: 80vh;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+      display: none;
+    }
+
+    .rec-panel.active {
+      display: block;
     }
 
     .rec-panel h3 {
       font-size: 1rem;
       margin-bottom: 12px;
       color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .rec-panel .close-btn {
+      background: #c0392b;
+      border: none;
+      color: #fff;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rec-panel .close-btn:hover {
+      background: #e74c3c;
     }
 
     .rec-list {
-      max-height: 600px;
+      max-height: calc(80vh - 80px);
       overflow-y: auto;
+    }
+
+    .toggle-rec-btn {
+      background: #2d5f3f;
+      padding: 12px 16px;
+      font-size: 1rem;
+      width: 100%;
+    }
+
+    .toggle-rec-btn:hover {
+      background: #3a7a52;
     }
 
     .line-controls {
@@ -461,15 +475,23 @@
       border-top-left-radius: 4px;
     }
 
+    .right-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
     .toolbar {
       display: flex;
-      gap: 8px;
+      flex-direction: row;
+      gap: 12px;
       padding: 12px;
-      background: #2a2a2a;
+      background: transparent;
       border-radius: 6px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
       justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
     }
 
     .toolbar-item {
@@ -477,26 +499,41 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 4px;
-      padding: 12px;
-      background: #333;
-      border: 2px solid #444;
+      gap: 2px;
+      padding: 4px;
+      background: transparent;
+      border: none;
       border-radius: 6px;
-      cursor: move;
+      cursor: grab;
       transition: all 0.2s;
-      min-width: 50px;
-      min-height: 50px;
+      min-width: auto;
+      min-height: auto;
       touch-action: none;
+      user-select: none;
     }
 
     .toolbar-item:hover {
-      background: #3a3a3a;
-      border-color: #555;
-      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.2);
+    }
+
+    .toolbar-item:active {
+      cursor: grabbing;
+      opacity: 0.7;
     }
 
     .toolbar-icon {
-      font-size: 2rem;
+      font-size: 1.8rem;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .dragging-icon {
+      position: fixed;
+      pointer-events: none;
+      z-index: 10000;
+      font-size: 1.8rem;
+      opacity: 0.8;
     }
 
     .toolbar-label {
@@ -511,6 +548,14 @@
       .sidebar {
         width: 100%;
       }
+
+      .top-bar {
+        flex-direction: column;
+      }
+
+      .top-bar button {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -523,32 +568,24 @@
       <button onclick="resetPositions()">Återställ positioner</button>
     </div>
 
-    <div class="top-bar">
-      <button id="recordBtn" onclick="toggleRecord()">🔴 Spela in</button>
-      <button onclick="playRecordings()">▶️ Spela upp</button>
-      <button onclick="stopPlayback()">⏹️ Stoppa</button>
-      <button class="secondary" onclick="restoreFromREC1()">🔁 Börja om</button>
-      <button class="danger" onclick="clearRecordings()">🗑️ Rensa inspelningar</button>
-    </div>
-
     <div class="toolbar">
-      <div class="toolbar-item" draggable="true" data-type="player-left" ondragstart="startToolbarDrag(event, 'player-left')">
-        <div class="toolbar-icon">🔵</div>
+      <div class="toolbar-item" data-type="player-left">
+        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'player-left', this)" ontouchstart="startIconDrag(event, 'player-left', this)">🔵</div>
       </div>
-      <div class="toolbar-item" draggable="true" data-type="player-right" ondragstart="startToolbarDrag(event, 'player-right')">
-        <div class="toolbar-icon">🔴</div>
+      <div class="toolbar-item" data-type="player-right">
+        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'player-right', this)" ontouchstart="startIconDrag(event, 'player-right', this)">🔴</div>
       </div>
-      <div class="toolbar-item" draggable="true" data-type="cone" ondragstart="startToolbarDrag(event, 'cone')">
-        <div class="toolbar-icon">🔺</div>
+      <div class="toolbar-item" data-type="cone">
+        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'cone', this)" ontouchstart="startIconDrag(event, 'cone', this)">🔺</div>
       </div>
-      <div class="toolbar-item" draggable="true" data-type="ball" ondragstart="startToolbarDrag(event, 'ball')">
-        <div class="toolbar-icon">⚽</div>
+      <div class="toolbar-item" data-type="ball">
+        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'ball', this)" ontouchstart="startIconDrag(event, 'ball', this)">⚽</div>
       </div>
-      <div class="toolbar-item" draggable="true" data-type="goal-left" ondragstart="startToolbarDrag(event, 'goal-left')">
-        <div class="toolbar-icon">🥅</div>
+      <div class="toolbar-item" data-type="goal-left">
+        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'goal-left', this)" ontouchstart="startIconDrag(event, 'goal-left', this)">🥅</div>
       </div>
-      <div class="toolbar-item" draggable="true" data-type="goal-right" ondragstart="startToolbarDrag(event, 'goal-right')">
-        <div class="toolbar-icon">🥅</div>
+      <div class="toolbar-item" data-type="goal-right">
+        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'goal-right', this)" ontouchstart="startIconDrag(event, 'goal-right', this)">🥅</div>
       </div>
     </div>
 
@@ -572,38 +609,53 @@
       </div>
 
       <div class="sidebar">
-        <div class="line-controls">
-          <h3>Planens linjer</h3>
-          <div class="line-control-row">
-            <input type="checkbox" id="showMidline" checked onchange="toggleLine('midline')">
-            <label for="showMidline">Mittlinje</label>
+        <div class="right-controls">
+          <div class="top-bar">
+            <button id="recordBtn" onclick="toggleRecord()">🔴 Spela in</button>
+            <button onclick="playRecordings()">▶️ Spela upp</button>
+            <button onclick="stopPlayback()">⏹️ Stoppa</button>
+            <button class="secondary" onclick="restoreFromREC1()">🔁 Börja om</button>
+            <button class="danger" onclick="clearRecordings()">🗑️ Rensa inspelningar</button>
           </div>
-          <div class="line-control-row">
-            <input type="checkbox" id="showCenterCircle" checked onchange="toggleLine('centerCircle')">
-            <label for="showCenterCircle">Mittenring</label>
-          </div>
-          <div class="line-control-row">
-            <label>Ringstorlek:</label>
-            <input type="range" id="circleSize" min="60" max="200" value="120" oninput="updateCircleSize(this.value)">
-          </div>
-          <div class="line-control-row">
-            <input type="checkbox" id="showCenterSpot" checked onchange="toggleLine('centerSpot')">
-            <label for="showCenterSpot">Mittenpunkt</label>
-          </div>
-          <div class="line-control-row">
-            <input type="checkbox" id="showPenaltyBoxes" checked onchange="togglePenaltyBoxes()">
-            <label for="showPenaltyBoxes">Straffområden</label>
-          </div>
-          <div class="line-control-row">
-            <input type="checkbox" id="showGoalAreas" checked onchange="toggleGoalAreas()">
-            <label for="showGoalAreas">Målområden</label>
-          </div>
-        </div>
 
-        <div class="rec-panel">
-          <h3>Inspelningar</h3>
-          <div id="recList" class="rec-list"></div>
+          <button class="toggle-rec-btn" onclick="toggleRecPanel()">📋 Inspelningar</button>
+
+          <div class="line-controls">
+            <h3>Planens linjer</h3>
+            <div class="line-control-row">
+              <input type="checkbox" id="showMidline" checked onchange="toggleLine('midline')">
+              <label for="showMidline">Mittlinje</label>
+            </div>
+            <div class="line-control-row">
+              <input type="checkbox" id="showCenterCircle" checked onchange="toggleLine('centerCircle')">
+              <label for="showCenterCircle">Mittenring</label>
+            </div>
+            <div class="line-control-row">
+              <label>Ringstorlek:</label>
+              <input type="range" id="circleSize" min="60" max="200" value="120" oninput="updateCircleSize(this.value)">
+            </div>
+            <div class="line-control-row">
+              <input type="checkbox" id="showCenterSpot" checked onchange="toggleLine('centerSpot')">
+              <label for="showCenterSpot">Mittenpunkt</label>
+            </div>
+            <div class="line-control-row">
+              <input type="checkbox" id="showPenaltyBoxes" checked onchange="togglePenaltyBoxes()">
+              <label for="showPenaltyBoxes">Straffområden</label>
+            </div>
+            <div class="line-control-row">
+              <input type="checkbox" id="showGoalAreas" checked onchange="toggleGoalAreas()">
+              <label for="showGoalAreas">Målområden</label>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div class="rec-panel" id="recPanel">
+        <h3>
+          Inspelningar
+          <button class="close-btn" onclick="toggleRecPanel()">×</button>
+        </h3>
+        <div id="recList" class="rec-list"></div>
       </div>
     </div>
   </div>
@@ -723,9 +775,95 @@
       ballOwners.clear();
     }
 
+    let draggingIcon = null;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let currentDragType = null;
+
     function startToolbarDrag(e, type) {
       e.dataTransfer.effectAllowed = 'copy';
       e.dataTransfer.setData('type', type);
+    }
+
+    function startIconDrag(e, type, iconElement) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const rect = iconElement.getBoundingClientRect();
+      dragStartX = e.clientX || (e.touches && e.touches[0].clientX);
+      dragStartY = e.clientY || (e.touches && e.touches[0].clientY);
+      currentDragType = type;
+
+      draggingIcon = document.createElement('div');
+      draggingIcon.className = 'dragging-icon';
+      draggingIcon.textContent = iconElement.textContent;
+      draggingIcon.style.left = rect.left + 'px';
+      draggingIcon.style.top = rect.top + 'px';
+      document.body.appendChild(draggingIcon);
+
+      iconElement.style.opacity = '0.3';
+
+      document.addEventListener('mousemove', onIconDragMove);
+      document.addEventListener('mouseup', onIconDragEnd);
+      document.addEventListener('touchmove', onIconDragMove);
+      document.addEventListener('touchend', onIconDragEnd);
+    }
+
+    function onIconDragMove(e) {
+      if (!draggingIcon) return;
+      e.preventDefault();
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+      const dx = clientX - dragStartX;
+      const dy = clientY - dragStartY;
+
+      draggingIcon.style.left = (dragStartX + dx) + 'px';
+      draggingIcon.style.top = (dragStartY + dy) + 'px';
+    }
+
+    function onIconDragEnd(e) {
+      if (!draggingIcon) return;
+      e.preventDefault();
+
+      const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
+      const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
+
+      const pitchRect = pitch.getBoundingClientRect();
+
+      if (clientX >= pitchRect.left && clientX <= pitchRect.right &&
+          clientY >= pitchRect.top && clientY <= pitchRect.bottom) {
+        
+        const x = clientX - pitchRect.left;
+        const y = clientY - pitchRect.top;
+
+        if (currentDragType === 'player-left') {
+          createPlayer(`L${++playerCounter}`, 'left', x, y, playerCounter);
+        } else if (currentDragType === 'player-right') {
+          createPlayer(`R${++playerCounter}`, 'right', x, y, playerCounter);
+        } else if (currentDragType === 'cone') {
+          createCone(`C${++coneCounter}`, x, y);
+        } else if (currentDragType === 'ball') {
+          createBall(`B${balls.length + 1}`, x, y);
+        } else if (currentDragType === 'goal-left') {
+          createGoal(`GL${++goalCounter}`, 'left', x, y);
+        } else if (currentDragType === 'goal-right') {
+          createGoal(`GR${++goalCounter}`, 'right', x, y);
+        }
+      }
+
+      document.body.removeChild(draggingIcon);
+      draggingIcon = null;
+      currentDragType = null;
+
+      const toolbarIcons = document.querySelectorAll('.toolbar-icon');
+      toolbarIcons.forEach(icon => icon.style.opacity = '1');
+
+      document.removeEventListener('mousemove', onIconDragMove);
+      document.removeEventListener('mouseup', onIconDragEnd);
+      document.removeEventListener('touchmove', onIconDragMove);
+      document.removeEventListener('touchend', onIconDragEnd);
     }
 
     function setupIconDragDrop() {
@@ -760,31 +898,31 @@
         e.preventDefault();
       }, { passive: false });
 
-      const toolbarItems = document.querySelectorAll('.toolbar-item');
-      toolbarItems.forEach(item => {
+      const toolbarIcons = document.querySelectorAll('.toolbar-icon');
+      toolbarIcons.forEach(icon => {
         let touchStartX, touchStartY;
         
-        item.addEventListener('touchstart', e => {
+        icon.addEventListener('touchstart', e => {
           const touch = e.touches[0];
           touchStartX = touch.clientX;
           touchStartY = touch.clientY;
-          item.style.opacity = '0.5';
+          icon.style.opacity = '0.5';
         });
 
-        item.addEventListener('touchmove', e => {
+        icon.addEventListener('touchmove', e => {
           e.preventDefault();
           const touch = e.touches[0];
           const dx = Math.abs(touch.clientX - touchStartX);
           const dy = Math.abs(touch.clientY - touchStartY);
           
           if (dx > 10 || dy > 10) {
-            item.style.opacity = '0.3';
+            icon.style.opacity = '0.3';
           }
         }, { passive: false });
 
-        item.addEventListener('touchend', e => {
+        icon.addEventListener('touchend', e => {
           e.preventDefault();
-          item.style.opacity = '1';
+          icon.style.opacity = '1';
           
           const touch = e.changedTouches[0];
           const pitchRect = pitch.getBoundingClientRect();
@@ -794,7 +932,7 @@
             
             const x = touch.clientX - pitchRect.left;
             const y = touch.clientY - pitchRect.top;
-            const type = item.dataset.type;
+            const type = icon.parentElement.dataset.type;
 
             if (type === 'player-left') {
               createPlayer(`L${++playerCounter}`, 'left', x, y, playerCounter);
@@ -870,7 +1008,7 @@
       el.style.border = '3px solid rgba(255, 255, 255, 0.9)';
       el.style.background = 'rgba(255, 255, 255, 0.15)';
       el.style.cursor = 'grab';
-      el.style.zIndex = '10';
+      el.style.zIndex = '100';
       el.style.left = (x - 30) + 'px';
       el.style.top = (y - 20) + 'px';
       pitch.appendChild(el);
@@ -1001,8 +1139,13 @@
       let x = e.clientX - pitchRect.left - offsetX;
       let y = e.clientY - pitchRect.top - offsetY;
 
-      x = Math.max(radius, Math.min(pitchRect.width - radius, x));
-      y = Math.max(radius, Math.min(pitchRect.height - radius, y));
+      if (type !== 'ball') {
+        x = Math.max(radius, Math.min(pitchRect.width - radius, x));
+        y = Math.max(radius, Math.min(pitchRect.height - radius, y));
+      } else {
+        x = Math.max(radius - 100, Math.min(pitchRect.width - radius + 100, x));
+        y = Math.max(radius - 100, Math.min(pitchRect.height - radius + 100, y));
+      }
 
       el.style.left = (x - radius) + 'px';
       el.style.top = (y - radius) + 'px';
@@ -1358,6 +1501,11 @@
     function stopPlayback() {
       isPlaying = false;
       if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
+    }
+
+    function toggleRecPanel() {
+      const panel = document.getElementById('recPanel');
+      panel.classList.toggle('active');
     }
 
     function clearRecordings() {
