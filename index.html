@@ -137,6 +137,7 @@
       touch-action: none;
       clip-path: inset(0 -100px -100px -100px);
       pointer-events: auto;
+      z-index: 1;
     }
 
     .pitch-line {
@@ -481,19 +482,22 @@
       flex-direction: column;
       gap: 12px;
     }
-
     .toolbar {
-      display: flex;
-      flex-direction: row;
-      gap: 12px;
-      padding: 12px;
-      background: transparent;
-      border-radius: 6px;
-      justify-content: center;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 16px;
-    }
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  padding: 12px;
+  background: transparent;
+  border-radius: 6px;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  position: relative;   /* NYTT */
+  z-index: 2000;        /* NYTT – över planen */
+}
+
+    
 
     .toolbar-item {
       display: flex;
@@ -526,7 +530,7 @@
     .toolbar-icon {
       font-size: 1.8rem;
       pointer-events: none;
-      user-select: none;
+      
     }
 
     .dragging-icon {
@@ -570,25 +574,32 @@
     </div>
 
     <div class="toolbar">
-      <div class="toolbar-item" data-type="player-left">
-        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'player-left', this)" ontouchstart="startIconDrag(event, 'player-left', this)">🔵</div>
-      </div>
-      <div class="toolbar-item" data-type="player-right">
-        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'player-right', this)" ontouchstart="startIconDrag(event, 'player-right', this)">🔴</div>
-      </div>
-      <div class="toolbar-item" data-type="cone">
-        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'cone', this)" ontouchstart="startIconDrag(event, 'cone', this)">🔺</div>
-      </div>
-      <div class="toolbar-item" data-type="ball">
-        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'ball', this)" ontouchstart="startIconDrag(event, 'ball', this)">⚽</div>
-      </div>
-      <div class="toolbar-item" data-type="goal-left">
-        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'goal-left', this)" ontouchstart="startIconDrag(event, 'goal-left', this)">🥅</div>
-      </div>
-      <div class="toolbar-item" data-type="goal-right">
-        <div class="toolbar-icon" onmousedown="startIconDrag(event, 'goal-right', this)" ontouchstart="startIconDrag(event, 'goal-right', this)">🥅</div>
-      </div>
-    </div>
+  <div class="toolbar-item" data-type="player-left">
+    <div class="toolbar-icon"
+         onpointerdown="startIconDrag(event, 'player-left', this)">🔵</div>
+  </div>
+  <div class="toolbar-item" data-type="player-right">
+    <div class="toolbar-icon"
+         onpointerdown="startIconDrag(event, 'player-right', this)">🔴</div>
+  </div>
+  <div class="toolbar-item" data-type="cone">
+    <div class="toolbar-icon"
+         onpointerdown="startIconDrag(event, 'cone', this)">🔺</div>
+  </div>
+  <div class="toolbar-item" data-type="ball">
+    <div class="toolbar-icon"
+         onpointerdown="startIconDrag(event, 'ball', this)">⚽</div>
+  </div>
+  <div class="toolbar-item" data-type="goal-left">
+    <div class="toolbar-icon"
+         onpointerdown="startIconDrag(event, 'goal-left', this)">🥅</div>
+  </div>
+  <div class="toolbar-item" data-type="goal-right">
+    <div class="toolbar-icon"
+         onpointerdown="startIconDrag(event, 'goal-right', this)">🥅</div>
+  </div>
+</div>
+
 
     <div class="main-layout">
 
