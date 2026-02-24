@@ -60,7 +60,7 @@
 
        .pitch-container { flex: 1; min-width: 0; display: flex; justify-content: center; overflow: visible;}
 
-    #pitchWrapper { position: relative; display: inline-block; overflow: visible; padding-top: 35px;}
+    #pitchWrapper { position: relative; display: inline-flex; overflow: visible; padding-top: 35px;}
 
     #pitch {
       position: relative;
@@ -202,10 +202,20 @@
     .rec-row button { padding: 4px 8px; font-size: 0.75rem; }
 
     .resize-handle {
-      position: absolute; bottom: 0; right: 0;
-      width: 20px; height: 20px; cursor: nwse-resize;
-      background: rgba(255,255,255,0.2); border-top-left-radius: 4px;
-    }
+  position: absolute;
+  bottom: -10px;      /* sticker lite utanför planens hörn */
+  right: -10px;
+  width: 28px;
+  height: 28px;
+  cursor: nwse-resize;
+  background: rgba(255, 255, 255, 0.4);
+  border-top-left-radius: 6px;
+  border-radius: 50%;           /* gör det till en rund knapp */
+  z-index: 200;
+  touch-action: none;           /* VIKTIGT för mobil */
+  border: 2px solid #fff;
+}
+
 
     .right-controls { display: flex; flex-direction: column; gap: 12px; }
 
