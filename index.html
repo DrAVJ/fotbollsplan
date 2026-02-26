@@ -7,508 +7,168 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
-      background: #1a1a1a;
-      color: #e0e0e0;
-      padding: 12px;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
+      background: #1a1a1a; color: #e0e0e0;
+      padding: 8px 8px 72px 8px;
+      touch-action: none; user-select: none;
+      -webkit-user-select: none; -webkit-touch-callout: none;
+      overflow-x: hidden;
     }
-    .container { max-width: 1600px; margin: 0 auto; }
-
-    button {
-      padding: 6px 10px;
-      border: none;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 0.85rem;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: #2d5f3f;
-      color: #fff;
-    }
-    button:hover { background: #3a7a52; }
-    button.secondary { background: #444; }
-    button.secondary:hover { background: #555; }
-    button.danger { background: #c0392b; }
-    button.danger:hover { background: #e74c3c; }
-    button.icon-btn { padding: 6px 8px; font-size: 1.1rem; }
-    button.export-btn {
-      background: #1a6ea8;
-    }
-    button.export-btn:hover { background: #2080c0; }
-    button.export-btn.recording { background: #c0392b; animation: pulse 1s infinite; }
-
+    button { padding:6px 10px;border:none;border-radius:6px;font-weight:600;font-size:0.85rem;cursor:pointer;transition:all 0.2s;background:#2d5f3f;color:#fff; }
+    button:hover { background:#3a7a52; }
+    button.secondary { background:#444; }
+    button.secondary:hover { background:#555; }
+    button.danger { background:#c0392b; }
+    button.danger:hover { background:#e74c3c; }
+    button.icon-btn { padding:6px 8px;font-size:1.1rem; }
+    button.export-btn { background:#1a6ea8; }
+    button.export-btn:hover { background:#2080c0; }
+    button.export-btn.recording { background:#c0392b;animation:pulse 1s infinite; }
     @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.6} }
+    input[type="number"] { width:40px;padding:3px 4px;border:1px solid #555;border-radius:4px;background:#2a2a2a;color:#fff;font-size:0.78rem; }
 
-    input[type="number"] {
-      width: 46px;
-      padding: 3px 4px;
-      border: 1px solid #555;
-      border-radius: 4px;
-      background: #2a2a2a;
-      color: #fff;
-      font-size: 0.8rem;
-    }
+    .rec-bar,.icon-bar { display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:6px; }
+    .transport { display:flex;align-items:center;gap:3px;background:#222;padding:4px 6px;border-radius:6px;flex-wrap:wrap; }
+    .transport button { padding:4px 6px;font-size:0.9rem;min-width:30px;background:#3a3a3a; }
+    .transport button:hover { background:#555; }
+    .transport .t-play { background:#2d5f3f;min-width:40px; }
+    .transport .t-play.paused { background:#ff9500; }
+    .scrubber-wrap { display:flex;align-items:center;gap:4px; }
+    .scrubber-wrap input[type="range"] { width:100px;accent-color:#4caf50;cursor:pointer; }
+    .time-label { font-size:0.78rem;color:#aaa;min-width:36px; }
 
-    /* Layout */
-    .top-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 8px;
-    }
+    .toolbar-item { display:flex;align-items:center;justify-content:center;padding:3px;border-radius:6px;cursor:grab;transition:all 0.2s;touch-action:none; }
+    .toolbar-item:hover { background:rgba(255,255,255,0.1);transform:scale(1.15); }
+    .toolbar-icon { font-size:1.6rem; }
+    .dragging-icon { position:fixed;pointer-events:none;z-index:10000;font-size:1.8rem;opacity:0.85; }
 
-    .top-left, .top-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .main-area { display:flex;align-items:flex-start;gap:0; }
+    .pitch-wrapper { position:relative;flex-shrink:0; }
+    #pitch { width:100%;height:100%;background:linear-gradient(180deg,#2d5f3f 0%,#1f4d2f 100%);border:3px solid #fff;border-radius:8px 0 0 8px;overflow:visible;touch-action:none;position:relative;z-index:1; }
 
-    /* Toolbar */
-    .toolbar {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    .toolbar-item {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 3px;
-      border-radius: 6px;
-      cursor: grab;
-      transition: all 0.2s;
-      touch-action: none;
-      user-select: none;
-    }
-    .toolbar-item:hover { background: rgba(255,255,255,0.1); transform: scale(1.15); }
-    .toolbar-item:active { cursor: grabbing; opacity: 0.7; }
-    .toolbar-icon { font-size: 1.6rem; }
-    .dragging-icon {
-      position: fixed;
-      pointer-events: none;
-      z-index: 10000;
-      font-size: 1.8rem;
-      opacity: 0.8;
-    }
+    .rec-col { width:0;overflow:hidden;transition:width 0.2s ease;flex-shrink:0;background:rgba(20,20,20,0.93);border-radius:0 8px 8px 0;border:1px solid #444;border-left:none;align-self:stretch; }
+    .rec-col.open { width:180px; }
+    .rec-col-inner { width:180px;padding:7px;display:flex;flex-direction:column;gap:5px; }
+    .rec-col-header { display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;color:#fff;white-space:nowrap; }
+    .rec-col-header button { background:#555;width:20px;height:20px;border-radius:50%;padding:0;font-size:0.85rem;flex-shrink:0; }
+    .rec-col-header button:hover { background:#c0392b; }
+    .step-info { font-size:0.73rem;color:#aaa; }
+    .step-info span { color:#fff;font-weight:700; }
+    .rec-list { overflow-y:auto;max-height:65vh; }
+    .rec-row { display:flex;align-items:center;gap:4px;margin-bottom:4px;padding:3px 4px;background:#333;border-radius:4px; }
+    .rec-row.playing { background:#1a4a2e;box-shadow:0 0 0 2px #4caf50; }
+    .rec-row span { flex:1;font-size:0.73rem;color:#bbb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .rec-row.playing span { color:#7fff7f;font-weight:700; }
+    .rec-row input { width:34px;padding:2px 3px;font-size:0.7rem; }
+    .rec-row button { padding:2px 4px;font-size:0.68rem; }
 
-    /* Transport */
-    .transport {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      background: #222;
-      padding: 5px 6px;
-      border-radius: 6px;
-    }
-    .transport button {
-      padding: 4px 6px;
-      font-size: 0.9rem;
-      min-width: 30px;
-      background: #3a3a3a;
-    }
-    .transport button:hover { background: #555; }
-    .transport .t-play {
-      background: #2d5f3f;
-      min-width: 40px;
-    }
-    .transport .t-play.paused { background: #ff9500; }
-    .scrubber-wrap {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      margin-left: 6px;
-    }
-    .scrubber-wrap input[type="range"] {
-      width: 120px;
-      accent-color: #4caf50;
-      height: 4px;
-      cursor: pointer;
-    }
-    .time-label {
-      font-size: 0.78rem;
-      color: #aaa;
-      min-width: 40px;
-      text-align: right;
-    }
+    .resize-handle { position:absolute;bottom:-10px;right:-10px;width:22px;height:22px;cursor:nwse-resize;background:rgba(255,255,255,0.45);border-radius:50%;z-index:200;touch-action:none;border:2px solid #fff; }
 
-    /* Planlayout */
-    .main-layout {
-      display: flex;
-      justify-content: center;
-      margin-top: 4px;
-    }
-    .pitch-container {
-      position: relative;
-      display: inline-flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    #pitchWrapper {
-      position: relative;
-      display: inline-flex;
-      padding-top: 24px;
-    }
-    #pitch {
-      position: relative;
-      width: 60vw;
-      height: 50vh;
-      background: linear-gradient(180deg,#2d5f3f 0%,#1f4d2f 100%);
-      border: 3px solid #fff;
-      border-radius: 8px;
-      overflow: visible;
-      touch-action: none;
-      clip-path: inset(-40px -100px -100px -100px);
-      pointer-events: auto;
-      z-index: 1;
-    }
-
-    .pitch-line { position: absolute; background: rgba(255,255,255,0.8); }
+    .pitch-line { position:absolute;background:rgba(255,255,255,0.8); }
     .midline { left:0;right:0;top:50%;height:2px;transform:translateY(-50%); }
-    .center-circle {
-      position:absolute;left:50%;top:50%;
-      width:120px;height:120px;
-      border:2px solid rgba(255,255,255,0.8);
-      border-radius:50%;
-      transform:translate(-50%,-50%);
-    }
-    .center-spot {
-      position:absolute;left:50%;top:50%;
-      width:4px;height:4px;
-      background:rgba(255,255,255,0.8);
-      border-radius:50%;
-      transform:translate(-50%,-50%);
-    }
+    .center-circle { position:absolute;left:50%;top:50%;width:22%;height:0;padding-bottom:22%;border:2px solid rgba(255,255,255,0.8);border-radius:50%;transform:translate(-50%,-50%); }
+    .center-spot { position:absolute;left:50%;top:50%;width:4px;height:4px;background:rgba(255,255,255,0.8);border-radius:50%;transform:translate(-50%,-50%); }
     .penalty-box { position:absolute;border:2px solid rgba(255,255,255,0.8); }
-    .penalty-box-left  { left:50%;top:0;width:40%;height:15%;transform:translateX(-50%); }
-    .penalty-box-right { left:50%;bottom:0;width:40%;height:15%;transform:translateX(-50%); }
+    .penalty-box-top    { left:50%;top:0;   width:40%;height:15%;transform:translateX(-50%); }
+    .penalty-box-bottom { left:50%;bottom:0;width:40%;height:15%;transform:translateX(-50%); }
     .goal-area { position:absolute;border:2px solid rgba(255,255,255,0.8); }
-    .goal-area-left  { left:50%;top:0;width:22%;height:8%;transform:translateX(-50%); }
-    .goal-area-right { left:50%;bottom:0;width:22%;height:8%;transform:translateX(-50%); }
+    .goal-area-top    { left:50%;top:0;   width:22%;height:8%;transform:translateX(-50%); }
+    .goal-area-bottom { left:50%;bottom:0;width:22%;height:8%;transform:translateX(-50%); }
+    .goal { position:absolute;left:50%;width:12%;height:0;padding-bottom:3.5%;border:3px solid #fff;border-radius:3px;background:linear-gradient(90deg,rgba(255,255,255,0.25) 1px,transparent 1px),linear-gradient(180deg,rgba(255,255,255,0.25) 1px,transparent 1px);background-size:20% 33%; }
+    .goal-top    { top:0;   transform:translateX(-50%) translateY(-100%);border-bottom:none; }
+    .goal-bottom { bottom:0;transform:translateX(-50%) translateY(100%); border-top:none; }
 
-    .goal {
-      position:absolute;left:50%;
-      width:80px;height:22px;
-      transform:translateX(-50%);
-      box-sizing:border-box;
-      border:3px solid #fff;
-      border-radius:3px;
-      background:
-        linear-gradient(90deg,rgba(255,255,255,0.25) 1px,transparent 1px),
-        linear-gradient(180deg,rgba(255,255,255,0.25) 1px,transparent 1px);
-      background-size:8px 8px;
-    }
-    .goal-left  { top:-22px;border-bottom:none; }
-    .goal-right { bottom:-22px;border-top:none; }
-
-    .cone {
-      position:absolute;
-      width:0;height:0;
-      border-left:12px solid transparent;
-      border-right:12px solid transparent;
-      border-bottom:20px solid #ffd700;
-      cursor:grab;z-index:10;touch-action:none;
-    }
-    .cone:active { cursor:grabbing;transform:scale(1.1); }
-
-    .player {
-      position:absolute;
-      width:36px;height:36px;
-      border-radius:50%;
-      display:flex;align-items:center;justify-content:center;
-      font-weight:700;font-size:0.9rem;
-      cursor:grab;
-      box-shadow:0 2px 8px rgba(0,0,0,0.4);
-      border:2px solid rgba(255,255,255,0.3);
-      transition:transform 0.1s;z-index:20;
-    }
-    .player:active { cursor:grabbing;transform:scale(1.1); }
-    .player.left  { background:linear-gradient(135deg,#3498db 0%,#2980b9 100%);color:#fff; }
-    .player.right { background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);color:#fff; }
-
-    .ball {
-      position:absolute;width:20px;height:20px;
-      border-radius:50%;
-      background:radial-gradient(circle at 30% 30%,#fff,#f0f0f0,#d0d0d0);
-      box-shadow:0 2px 6px rgba(0,0,0,0.5),inset -2px -2px 4px rgba(0,0,0,0.2);
-      cursor:grab;border:1px solid rgba(0,0,0,0.2);z-index:50;
-    }
-    .ball:active { cursor:grabbing; }
+    .cone { position:absolute;width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:18px solid #ffd700;cursor:grab;z-index:10;touch-action:none; }
+    .player { position:absolute;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;cursor:grab;box-shadow:0 2px 8px rgba(0,0,0,0.4);border:2px solid rgba(255,255,255,0.3);z-index:20;touch-action:none; }
+    .player.left  { background:linear-gradient(135deg,#3498db,#2980b9);color:#fff; }
+    .player.right { background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff; }
+    .ball { position:absolute;width:18px;height:18px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#f0f0f0,#d0d0d0);box-shadow:0 2px 6px rgba(0,0,0,0.5);cursor:grab;border:1px solid rgba(0,0,0,0.2);z-index:50;touch-action:none; }
     .ball.held { pointer-events:none;z-index:25; }
-
-    .trace {
-      position:absolute;pointer-events:none;
-      stroke-dasharray:5,5;
-      animation:dash 0.5s linear infinite;
-      z-index:5;
-    }
+    .trace { position:absolute;pointer-events:none;stroke-dasharray:5,5;animation:dash 0.5s linear infinite;z-index:5; }
     @keyframes dash { to { stroke-dashoffset:-10; } }
 
-    .resize-handle {
-      position:absolute;
-      bottom:-10px;right:-10px;
-      width:26px;height:26px;
-      cursor:nwse-resize;
-      background:rgba(255,255,255,0.4);
-      border-radius:50%;
-      z-index:200;touch-action:none;
-      border:2px solid #fff;
-    }
+    .bottom-bar { position:fixed;bottom:0;left:0;right:0;background:rgba(26,26,26,0.97);border-top:1px solid #444;padding:6px 10px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center;z-index:5000; }
+    .bottom-bar label { display:flex;align-items:center;gap:4px;color:#ccc;cursor:pointer;font-size:0.8rem;white-space:nowrap; }
+    .bottom-bar .reset-btn { padding:4px 8px;font-size:0.75rem; }
 
-    /* Plan-linjekontroller – liten vertikal grupp vid sidan */
-    .side-controls {
-      position: absolute;
-      left: -90px;
-      top: 40px;
-      width: 80px;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.75rem;
-    }
-    .side-controls label {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      color: #ccc;
-      cursor: pointer;
-    }
-    .side-controls input[type="checkbox"] {
-      flex-shrink: 0;
-    }
-    .side-controls .reset-btn {
-      margin-top: 4px;
-      padding: 4px 4px;
-      font-size: 0.75rem;
-    }
-
-    /* REC overlay */
-    .rec-overlay {
-      position: absolute;
-      top: 10px;
-      right: -260px;
-      width: 240px;
-      max-height: 80vh;
-      background: rgba(20,20,20,0.9);
-      border-radius: 8px;
-      border: 1px solid #444;
-      padding: 8px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.7);
-      display: none;
-      flex-direction: column;
-      gap: 6px;
-      z-index: 3000;
-    }
-    .rec-overlay.active { display: flex; }
-    .rec-overlay-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.85rem;
-      color: #fff;
-    }
-    .rec-overlay-header button {
-      background: #555;
-      width: 22px;height: 22px;
-      border-radius: 50%;
-      padding: 0;
-      font-size: 0.9rem;
-    }
-    .rec-overlay-header button:hover { background:#c0392b; }
-
-    .step-info {
-      font-size: 0.75rem;
-      color: #aaa;
-      text-align: left;
-    }
-    .step-info span {
-      color: #fff;
-      font-weight: 700;
-    }
-
-    .rec-list {
-      overflow-y: auto;
-      max-height: 60vh;
-      padding-top: 2px;
-    }
-    .rec-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 5px;
-      padding: 4px 5px;
-      background: #333;
-      border-radius: 4px;
-      transition: background 0.2s, box-shadow 0.2s;
-    }
-    .rec-row.playing {
-      background:#1a4a2e;
-      box-shadow:0 0 0 2px #4caf50;
-    }
-    .rec-row span {
-      flex: 1;
-      font-size: 0.78rem;
-      color: #bbb;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .rec-row.playing span {
-      color:#7fff7f;
-      font-weight:700;
-    }
-    .rec-row input {
-      width: 40px;
-      padding: 2px 3px;
-      font-size: 0.75rem;
-    }
-    .rec-row button {
-      padding: 2px 5px;
-      font-size: 0.7rem;
-    }
-
-    /* Export overlay */
-    #exportOverlay {
-      display:none;
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,0.75);
-      z-index:9000;
-      align-items:center;
-      justify-content:center;
-      flex-direction:column;
-      gap:16px;
-    }
+    #exportOverlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9000;align-items:center;justify-content:center;flex-direction:column;gap:16px; }
     #exportOverlay.active { display:flex; }
     #exportOverlay p { color:#fff;font-size:1.1rem; }
-    #exportProgress {
-      width:300px;height:12px;
-      background:#333;border-radius:6px;overflow:hidden;
-    }
-    #exportProgressBar {
-      height:100%;width:0%;background:#1a6ea8;
-      transition:width 0.2s;
-    }
+    #exportProgress { width:300px;height:12px;background:#333;border-radius:6px;overflow:hidden; }
+    #exportProgressBar { height:100%;width:0%;background:#1a6ea8;transition:width 0.2s; }
   </style>
 </head>
 <body>
-<div class="container">
 
-  <!-- TOP BAR: ikoner + inspelning -->
-  <div class="top-bar">
-    <div class="top-left">
-      <div class="toolbar">
-        <div class="toolbar-item" data-type="player-left">
-          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'player-left',this)">🔵</div>
-        </div>
-        <div class="toolbar-item" data-type="player-right">
-          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'player-right',this)">🔴</div>
-        </div>
-        <div class="toolbar-item" data-type="cone">
-          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'cone',this)">🔺</div>
-        </div>
-        <div class="toolbar-item" data-type="ball">
-          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'ball',this)">⚽</div>
-        </div>
-        <div class="toolbar-item" data-type="goal-left">
-          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'goal-left',this)">
-            <svg width="36" height="10" viewBox="0 0 36 10">
-              <path d="M1,9 L1,1 L35,1 L35,9" fill="rgba(255,255,255,0.12)" stroke="white" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-              <line x1="10" y1="1" x2="10" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-              <line x1="18" y1="1" x2="18" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-              <line x1="26" y1="1" x2="26" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-              <line x1="1"  y1="5" x2="35" y2="5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-            </svg>
-          </div>
-        </div>
-        <div class="toolbar-item" data-type="goal-right">
-          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'goal-right',this)">
-            <svg width="36" height="10" viewBox="0 0 36 10">
-              <path d="M1,1 L1,9 L35,9 L35,1" fill="rgba(255,255,255,0.12)" stroke="white" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-              <line x1="10" y1="1" x2="10" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-              <line x1="18" y1="1" x2="18" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-              <line x1="26" y1="1" x2="26" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-              <line x1="1"  y1="5" x2="35" y2="5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="top-right">
-      <button id="recordBtn" onclick="toggleRecord()">🔴 REC</button>
-
-      <div class="transport">
-        <button class="secondary icon-btn" onclick="stepBack()" title="Föregående steg">⏮</button>
-        <button class="secondary icon-btn" onclick="scrubRelative(-0.5)" title="-0.5s">⏪</button>
-        <button id="panelPlayBtn" class="t-play icon-btn" onclick="togglePlayPause()">▶</button>
-        <button class="secondary icon-btn" onclick="scrubRelative(0.5)" title="+0.5s">⏩</button>
-        <button class="secondary icon-btn" onclick="stepForward()" title="Nästa steg">⏭</button>
-        <button class="secondary icon-btn" onclick="stopAndReset()" title="Stopp">⏹</button>
-      </div>
-
-      <div class="scrubber-wrap">
-        <input type="range" id="scrubber" min="0" max="1000" value="0" oninput="onScrubInput(this.value)">
-        <span id="timeLabel" class="time-label">0.0s</span>
-      </div>
-
-      <button class="secondary icon-btn" onclick="toggleRecOverlay()" title="Visa/dölj inspelningar">📋</button>
-      <button id="exportBtn" class="export-btn icon-btn" onclick="toggleExportRecord()" title="Spela in video">🎬</button>
-      <button class="secondary icon-btn" onclick="restoreFromREC1()" title="Återställ startläge">🔁</button>
-      <button class="danger icon-btn" onclick="clearRecordings()" title="Rensa alla inspelningar">🗑️</button>
-    </div>
+<div class="rec-bar">
+  <button id="recordBtn" onclick="toggleRecord()">🔴 REC</button>
+  <div class="transport">
+    <button class="secondary icon-btn" onclick="stepBack()">⏮</button>
+    <button class="secondary icon-btn" onclick="scrubRelative(-0.5)">⏪</button>
+    <button id="panelPlayBtn" class="t-play icon-btn" onclick="togglePlayPause()">▶</button>
+    <button class="secondary icon-btn" onclick="scrubRelative(0.5)">⏩</button>
+    <button class="secondary icon-btn" onclick="stepForward()">⏭</button>
+    <button class="secondary icon-btn" onclick="stopAndReset()">⏹</button>
   </div>
+  <div class="scrubber-wrap">
+    <input type="range" id="scrubber" min="0" max="1000" value="0" oninput="onScrubInput(this.value)">
+    <span id="timeLabel" class="time-label">0.0s</span>
+  </div>
+  <button class="secondary icon-btn" onclick="toggleRecCol()" title="Visa inspelningar">📋</button>
+  <button id="exportBtn" class="export-btn icon-btn" onclick="toggleExportRecord()">🎬</button>
+  <button class="secondary icon-btn" onclick="restoreFromREC1()">🔁</button>
+  <button class="danger icon-btn" onclick="clearRecordings()">🗑️</button>
+</div>
 
-  <!-- Plan + overlay -->
-  <div class="main-layout">
-    <div class="pitch-container">
-      <div id="pitchWrapper">
-        <div id="pitch">
-          <div class="pitch-line midline" id="midline"></div>
-          <div class="center-circle" id="centerCircle"></div>
-          <div class="center-spot" id="centerSpot"></div>
-          <div class="penalty-box penalty-box-left" id="penaltyLeft"></div>
-          <div class="penalty-box penalty-box-right" id="penaltyRight"></div>
-          <div class="goal-area goal-area-left" id="goalAreaLeft"></div>
-          <div class="goal-area goal-area-right" id="goalAreaRight"></div>
-          <div class="goal goal-left" id="goalLeft"></div>
-          <div class="goal goal-right" id="goalRight"></div>
-        </div>
-        <div class="resize-handle" id="resizeHandle"></div>
+<div class="icon-bar">
+  <div class="toolbar-item"><div class="toolbar-icon" onpointerdown="startIconDrag(event,'player-left',this)">🔵</div></div>
+  <div class="toolbar-item"><div class="toolbar-icon" onpointerdown="startIconDrag(event,'player-right',this)">🔴</div></div>
+  <div class="toolbar-item"><div class="toolbar-icon" onpointerdown="startIconDrag(event,'cone',this)">🔺</div></div>
+  <div class="toolbar-item"><div class="toolbar-icon" onpointerdown="startIconDrag(event,'ball',this)">⚽</div></div>
+  <div class="toolbar-item"><div class="toolbar-icon" onpointerdown="startIconDrag(event,'goal-top',this)">
+    <svg width="32" height="10" viewBox="0 0 32 10"><path d="M1,9 L1,1 L31,1 L31,9" fill="rgba(255,255,255,0.12)" stroke="white" stroke-width="2"/><line x1="9" y1="1" x2="9" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><line x1="16" y1="1" x2="16" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><line x1="23" y1="1" x2="23" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><line x1="1" y1="5" x2="31" y2="5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/></svg>
+  </div></div>
+  <div class="toolbar-item"><div class="toolbar-icon" onpointerdown="startIconDrag(event,'goal-bottom',this)">
+    <svg width="32" height="10" viewBox="0 0 32 10"><path d="M1,1 L1,9 L31,9 L31,1" fill="rgba(255,255,255,0.12)" stroke="white" stroke-width="2"/><line x1="9" y1="1" x2="9" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><line x1="16" y1="1" x2="16" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><line x1="23" y1="1" x2="23" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/><line x1="1" y1="5" x2="31" y2="5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/></svg>
+  </div></div>
+</div>
 
-        <!-- Plan & linjer – liten panel till vänster om planen -->
-        <div class="side-controls">
-          <label><input type="checkbox" id="showGoalsCheck" checked onchange="setGoalVisibility(this.checked)">Mål</label>
-          <label><input type="checkbox" id="showMidline" checked onchange="toggleLine('midline')">Mittlinje</label>
-          <label><input type="checkbox" id="showCenterCircle" checked onchange="toggleLine('centerCircle')">Ring</label>
-          <label><input type="checkbox" id="showCenterSpot" checked onchange="toggleLine('centerSpot')">Punkt</label>
-          <label><input type="checkbox" id="showPenaltyBoxes" checked onchange="togglePenaltyBoxes()">Straff</label>
-          <label><input type="checkbox" id="showGoalAreas" checked onchange="toggleGoalAreas()">Målomr.</label>
-          <button class="reset-btn danger" onclick="resetPositions()">↻ Återställ</button>
-        </div>
-
-        <!-- REC overlay vid sidan om planen -->
-        <div class="rec-overlay" id="recOverlay">
-          <div class="rec-overlay-header">
-            <span>Inspelningar</span>
-            <button onclick="toggleRecOverlay()">×</button>
-          </div>
-          <div class="step-info">
-            Steg <span id="stepLabel">–</span> / <span id="stepTotal">–</span>
-          </div>
-          <div id="recList" class="rec-list"></div>
-        </div>
+<div class="main-area">
+  <div class="pitch-wrapper" id="pitchWrapper">
+    <div id="pitch">
+      <div class="pitch-line midline" id="midline"></div>
+      <div class="center-circle" id="centerCircle"></div>
+      <div class="center-spot" id="centerSpot"></div>
+      <div class="penalty-box penalty-box-top" id="penaltyTop"></div>
+      <div class="penalty-box penalty-box-bottom" id="penaltyBottom"></div>
+      <div class="goal-area goal-area-top" id="goalAreaTop"></div>
+      <div class="goal-area goal-area-bottom" id="goalAreaBottom"></div>
+      <div class="goal goal-top" id="goalTop"></div>
+      <div class="goal goal-bottom" id="goalBottom"></div>
+    </div>
+    <div class="resize-handle" id="resizeHandle"></div>
+  </div>
+  <div class="rec-col" id="recCol">
+    <div class="rec-col-inner">
+      <div class="rec-col-header">
+        <span>Inspelningar</span>
+        <button onclick="toggleRecCol()">×</button>
       </div>
+      <div class="step-info">Steg <span id="stepLabel">–</span> / <span id="stepTotal">–</span></div>
+      <div id="recList" class="rec-list"></div>
     </div>
   </div>
 </div>
 
-<!-- Export overlay -->
+<div class="bottom-bar">
+  <label><input type="checkbox" id="showGoalsCheck" checked onchange="setGoalVisibility(this.checked)">Mål</label>
+  <label><input type="checkbox" id="showMidline" checked onchange="toggleLine('midline')">Mittlinje</label>
+  <label><input type="checkbox" id="showCenterCircle" checked onchange="toggleLine('centerCircle')">Ring</label>
+  <label><input type="checkbox" id="showCenterSpot" checked onchange="toggleLine('centerSpot')">Punkt</label>
+  <label><input type="checkbox" id="showPenaltyBoxes" checked onchange="togglePenaltyBoxes()">Straff</label>
+  <label><input type="checkbox" id="showGoalAreas" checked onchange="toggleGoalAreas()">Målomr.</label>
+  <button class="reset-btn danger" onclick="resetPositions()">↻ Återställ</button>
+</div>
+
 <div id="exportOverlay">
   <p id="exportStatus">Spelar in video...</p>
   <div id="exportProgress"><div id="exportProgressBar"></div></div>
@@ -516,9 +176,9 @@
 </div>
 
 <script>
-  const pitch        = document.getElementById('pitch');
   const pitchWrapper = document.getElementById('pitchWrapper');
-  const resizeHandle = document.getElementById('resizeHandle');
+  const pitch        = document.getElementById('pitch');
+  const recCol       = document.getElementById('recCol');
   const recList      = document.getElementById('recList');
   const recordBtn    = document.getElementById('recordBtn');
   const exportBtn    = document.getElementById('exportBtn');
@@ -527,230 +187,38 @@
   const timeLabel    = document.getElementById('timeLabel');
   const stepLabel    = document.getElementById('stepLabel');
   const stepTotal    = document.getElementById('stepTotal');
-  const recOverlay   = document.getElementById('recOverlay');
 
   let showGoals = true;
-  let players=[], balls=[], cones=[], traces=[];
-  let playerCounter=0, coneCounter=0;
-  let dragInfo=null, spacePressed=false, ballTraceActive=null;
+  let players=[],balls=[],cones=[],traces=[],goals=[];
+  let playerCounter=0,coneCounter=0,goalCounter=0;
+  let dragInfo=null,spacePressed=false,ballTraceActive=null;
   let ballOwners=new Map();
+
+  // ── INSPELNING: exakt samma logik som fungerande version ─────────────
   let recordings=[], currentRecording=null, recordMode=false;
 
-  let isPlaying=false, isPaused=false, playbackRequestId=null;
-  let playbackStartWall=0, playbackPauseOffset=0, playbackSteps=[], playbackTotalDur=0;
+  let isPlaying=false,isPaused=false,playbackRequestId=null;
+  let playbackStartWall=0,playbackPauseOffset=0,playbackSteps=[],playbackTotalDur=0;
+  let resizing=false,resizeStartW=0,resizeStartH=0,resizeStartX=0,resizeStartY=0;
+  let exportCanvas=null,exportCtx=null,exportStream=null;
+  let exportRecorder=null,exportChunks=[],exportActive=false,exportRAF=null,exportStartTime=0;
 
-  let resizing=false, resizeStartWidth=0, resizeStartHeight=0, resizeStartX=0, resizeStartY=0;
-  let goals=[], goalCounter=0;
-
-  // VIDEO EXPORT
-  let exportCanvas=null, exportCtx=null, exportStream=null;
-  let exportRecorder=null, exportChunks=[], exportActive=false;
-  let exportRAF=null, exportStartTime=0;
-
-  // ── TRANSPORT ───────────────────────────────────────────────────────
-  function getCurrentTime() {
-    if (!playbackTotalDur) return 0;
-    if (isPaused) return playbackPauseOffset % playbackTotalDur;
-    return ((performance.now() - playbackStartWall) / 1000 + playbackPauseOffset) % playbackTotalDur;
-  }
-  function seekTo(t) {
-    t = Math.max(0, Math.min(playbackTotalDur || 0, t));
-    playbackPauseOffset = t;
-    playbackStartWall = performance.now();
-    applyFrameAtTime(t);
-    updateTransportUI(t);
-  }
-  function scrubRelative(delta) { if (playbackTotalDur) seekTo(getCurrentTime() + delta); }
-  function stepForward() {
-    if (!playbackSteps.length) return;
-    const t = getCurrentTime(); let acc = 0;
-    for (const s of playbackSteps) {
-      acc += s.duration;
-      if (acc > t + 0.01) { seekTo(acc - s.duration + 0.001); return; }
-    }
-    seekTo(playbackTotalDur);
-  }
-  function stepBack() {
-    if (!playbackSteps.length) return;
-    const t = getCurrentTime(); let acc = 0, prev = 0;
-    for (const s of playbackSteps) {
-      if (acc + s.duration > t - 0.01) { seekTo(prev); return; }
-      prev = acc; acc += s.duration;
-    }
-    seekTo(0);
-  }
-  function togglePlayPause() {
-    if (!playbackSteps.length) { buildPlaybackSteps(); if (!playbackSteps.length) return; }
-    if (isPlaying && !isPaused) {
-      playbackPauseOffset = getCurrentTime(); isPaused = true; isPlaying = false;
-      if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
-      panelPlayBtn.textContent = '▶'; panelPlayBtn.classList.add('paused');
-    } else {
-      playbackStartWall = performance.now(); isPaused = false; isPlaying = true;
-      panelPlayBtn.textContent = '⏸'; panelPlayBtn.classList.remove('paused');
-      playbackLoop();
-    }
-  }
-  function stopAndReset() {
-    isPlaying = false; isPaused = false;
-    playbackPauseOffset = 0; playbackStartWall = performance.now();
-    if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
-    panelPlayBtn.textContent = '▶'; panelPlayBtn.classList.remove('paused');
-    if (playbackSteps.length) applyFrameAtTime(0);
-    updateTransportUI(0);
-    document.querySelectorAll('.rec-row').forEach(r => r.classList.remove('playing'));
-  }
-  function buildPlaybackSteps() {
-    if (!recordings.length) return;
-    const byStep = new Map();
-    for (const rec of recordings) {
-      if (!byStep.has(rec.step)) byStep.set(rec.step,[]);
-      byStep.get(rec.step).push(rec);
-    }
-    playbackSteps = [];
-    for (const step of Array.from(byStep.keys()).sort((a,b)=>a-b)) {
-      const recs = byStep.get(step); let maxDur = 0;
-      for (const rec of recs) {
-        if (rec.frames.length < 2) continue;
-        maxDur = Math.max(maxDur, rec.frames.at(-1).t - rec.frames[0].t);
-      }
-      playbackSteps.push({ step, recs, duration: maxDur });
-    }
-    playbackTotalDur = playbackSteps.reduce((s,p) => s + p.duration, 0);
-    stepTotal.textContent = playbackSteps.length;
-  }
-  function applyFrameAtTime(tWrapped) {
-    if (!playbackSteps.length) return;
-    const pr = pitch.getBoundingClientRect();
-    let acc = 0, current = playbackSteps[0], stepIdx = 0;
-    for (let i = 0; i < playbackSteps.length; i++) {
-      const s = playbackSteps[i];
-      if (tWrapped >= acc && tWrapped < acc + s.duration) { current = s; stepIdx = i; break; }
-      acc += s.duration;
-    }
-    const localT = tWrapped - acc;
-    const activeIds = new Set();
-    for (const rec of current.recs) {
-      if (!rec.frames || rec.frames.length < 2) continue;
-      activeIds.add(rec.id);
-      const t0 = rec.frames[0].t, tEnd = rec.frames.at(-1).t;
-      const t = t0 + Math.min(localT, (tEnd - t0) || 0.001);
-      let i = 0; while (i < rec.frames.length - 1 && rec.frames[i+1].t < t) i++;
-      const fA = rec.frames[i], fB = rec.frames[Math.min(i+1, rec.frames.length-1)];
-      const u = Math.max(0, Math.min(1, (t - fA.t) / ((fB.t - fA.t) || 1e-6)));
-      const x = (fA.xRel + (fB.xRel - fA.xRel) * u) * pr.width;
-      const y = (fA.yRel + (fB.yRel - fA.yRel) * u) * pr.height;
-      const obj = [...players,...balls,...cones,...goals].find(o => o.id === rec.actorId);
-      if (obj) {
-        const r = obj.el.classList.contains('ball')?10:obj.el.classList.contains('cone')?8:obj.el.classList.contains('goal')?40:18;
-        obj.el.style.left = (x-r)+'px'; obj.el.style.top = (y-r)+'px'; obj.x=x; obj.y=y;
-        if (rec.heldBalls && rec.heldBalls.length) {
-          const px = i>0?rec.frames[i-1].xRel*pr.width:x, py = i>0?rec.frames[i-1].yRel*pr.height:y;
-          const angle = Math.atan2(y-py, x-px);
-          for (const bid of rec.heldBalls) {
-            const ball = balls.find(b=>b.id===bid);
-            if (ball) {
-              ball.x = x+Math.cos(angle)*25;
-              ball.y = y+Math.sin(angle)*25;
-              ball.el.style.left = (ball.x-10)+'px';
-              ball.el.style.top  = (ball.y-10)+'px';
-            }
-          }
-        }
-      }
-    }
-    document.querySelectorAll('.rec-row').forEach(row => row.classList.toggle('playing', activeIds.has(row.dataset.recId)));
-    stepLabel.textContent = stepIdx + 1;
-  }
-  function updateTransportUI(t) {
-    timeLabel.textContent = t.toFixed(1)+'s';
-    if (playbackTotalDur > 0) scrubber.value = Math.round((t / playbackTotalDur) * 1000);
-  }
-  function onScrubInput(val) {
-    if (!playbackTotalDur) return;
-    if (isPlaying && !isPaused) {
-      isPaused = true; isPlaying = false;
-      if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
-      panelPlayBtn.textContent = '▶'; panelPlayBtn.classList.add('paused');
-    }
-    const t = (val / 1000) * playbackTotalDur;
-    playbackPauseOffset = t; applyFrameAtTime(t); updateTransportUI(t);
+  // ── INIT ─────────────────────────────────────────────────────────────
+  function initPitchSize(){
+    const vw=window.innerWidth-16;
+    const initW=Math.min(vw,500);
+    pitchWrapper.style.width=initW+'px';
+    pitchWrapper.style.height=Math.round(initW*1.4)+'px';
   }
 
-  // ── REC OVERLAY ─────────────────────────────────────────────────────
-  function toggleRecOverlay() {
-    recOverlay.classList.toggle('active');
-    if (recOverlay.classList.contains('active')) {
-      buildPlaybackSteps();
-      renderRecList();
-    }
-  }
-
-  // ── VIDEO EXPORT ────────────────────────────────────────────────────
-  function toggleExportRecord(){ if (!exportActive) startExportRecord(); else stopExportRecord(); }
-  function startExportRecord(){
-    if (!recordings.length) { alert('Spela in rörelser först.'); return; }
-    const pr = pitch.getBoundingClientRect();
-    exportCanvas = document.createElement('canvas');
-    exportCanvas.width = Math.round(pr.width); exportCanvas.height = Math.round(pr.height);
-    exportCtx = exportCanvas.getContext('2d');
-    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':MediaRecorder.isTypeSupported('video/webm;codecs=vp8')?'video/webm;codecs=vp8':'video/webm';
-    exportStream = exportCanvas.captureStream(30);
-    exportRecorder = new MediaRecorder(exportStream, {mimeType:mime, videoBitsPerSecond:4000000});
-    exportChunks = [];
-    exportRecorder.ondataavailable = e => { if (e.data.size > 0) exportChunks.push(e.data); };
-    exportRecorder.onstop = finalizeExport; exportRecorder.start(100);
-    exportActive = true; exportStartTime = performance.now();
-    exportBtn.textContent = 'Stoppa'; exportBtn.classList.add('recording');
-    document.getElementById('exportOverlay').classList.add('active');
-    buildPlaybackSteps();
-    isPlaying=true; isPaused=false; playbackPauseOffset=0; playbackStartWall=performance.now(); playbackLoop();
-    exportDrawLoop();
-  }
-  function exportDrawLoop(){
-    if (!exportActive) return;
-    const pr=pitch.getBoundingClientRect(), cw=exportCanvas.width, ch=exportCanvas.height, ctx=exportCtx;
-    const grad=ctx.createLinearGradient(0,0,0,ch); grad.addColorStop(0,'#2d5f3f'); grad.addColorStop(1,'#1f4d2f');
-    ctx.fillStyle=grad; ctx.fillRect(0,0,cw,ch);
-    ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=3; ctx.strokeRect(1.5,1.5,cw-3,ch-3);
-    const lc='rgba(255,255,255,0.8)';
-    if(document.getElementById('showMidline').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,ch/2);ctx.lineTo(cw,ch/2);ctx.stroke();}
-    if(document.getElementById('showCenterCircle').checked){const r=parseInt(document.getElementById('circleSize')?.value||120)/2;ctx.strokeStyle=lc;ctx.lineWidth=2;ctx.beginPath();ctx.arc(cw/2,ch/2,r,0,Math.PI*2);ctx.stroke();}
-    if(document.getElementById('showCenterSpot').checked){ctx.fillStyle=lc;ctx.beginPath();ctx.arc(cw/2,ch/2,3,0,Math.PI*2);ctx.fill();}
-    if(document.getElementById('showPenaltyBoxes').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;const pw=cw*0.4,ph=ch*0.15;ctx.strokeRect((cw-pw)/2,0,pw,ph);ctx.strokeRect((cw-pw)/2,ch-ph,pw,ph);}
-    if(document.getElementById('showGoalAreas').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;const gaw=cw*0.22,gah=ch*0.08;ctx.strokeRect((cw-gaw)/2,0,gaw,gah);ctx.strokeRect((cw-gaw)/2,ch-gah,gaw,gah);}
-    if(showGoals){drawFixedGoal(ctx,cw,ch,'top');drawFixedGoal(ctx,cw,ch,'bottom');}
-    for(const goal of goals){const gr=goal.el.getBoundingClientRect(),gx=gr.left-pr.left,gy=gr.top-pr.top;ctx.save();ctx.translate(gx+gr.width/2,gy+gr.height/2);ctx.rotate(goal.rotation*Math.PI/180);ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=3;ctx.fillStyle='rgba(255,255,255,0.15)';ctx.strokeRect(-gr.width/2,-gr.height/2,gr.width,gr.height);ctx.fillRect(-gr.width/2,-gr.height/2,gr.width,gr.height);ctx.restore();}
-    ctx.setLineDash([5,5]);
-    for(const svg of traces){const path=svg.querySelector('path');if(!path)continue;const pts=parseSvgPath(path.getAttribute('d'));if(pts.length<2)continue;ctx.strokeStyle='#ffeb3b';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.stroke();}
-    ctx.setLineDash([]);
-    for(const cone of cones){ctx.beginPath();ctx.moveTo(cone.x,cone.y-10);ctx.lineTo(cone.x-12,cone.y+10);ctx.lineTo(cone.x+12,cone.y+10);ctx.closePath();ctx.fillStyle='#ffd700';ctx.fill();}
-    for(const ball of balls){const rg=ctx.createRadialGradient(ball.x-3,ball.y-3,1,ball.x,ball.y,10);rg.addColorStop(0,'#fff');rg.addColorStop(0.5,'#f0f0f0');rg.addColorStop(1,'#d0d0d0');ctx.beginPath();ctx.arc(ball.x,ball.y,10,0,Math.PI*2);ctx.fillStyle=rg;ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();}
-    for(const p of players){const isLeft=p.side==='left';const rg=ctx.createLinearGradient(p.x-18,p.y-18,p.x+18,p.y+18);if(isLeft){rg.addColorStop(0,'#3498db');rg.addColorStop(1,'#2980b9');}else{rg.addColorStop(0,'#e74c3c');rg.addColorStop(1,'#c0392b');}ctx.beginPath();ctx.arc(p.x,p.y,18,0,Math.PI*2);ctx.fillStyle=rg;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(p.num),p.x,p.y);}
-    const elapsed=((performance.now()-exportStartTime)/1000).toFixed(1);
-    const pct=Math.min(100,playbackTotalDur>0?(performance.now()-playbackStartWall)/1000/playbackTotalDur*100:0);
-    document.getElementById('exportProgressBar').style.width=pct+'%';
-    document.getElementById('exportStatus').textContent='Spelar in... '+elapsed+'s';
-    exportRAF=requestAnimationFrame(exportDrawLoop);
-  }
-  function drawFixedGoal(ctx,cw,ch,pos){const gw=80,gh=18,gx=(cw-gw)/2,gy=pos==='top'?-gh:ch;ctx.fillStyle='rgba(255,255,255,0.1)';ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.fillRect(gx,gy,gw,gh);ctx.strokeRect(gx,gy,gw,gh);ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;for(let x=gx+8;x<gx+gw;x+=8){ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x,gy+gh);ctx.stroke();}for(let y=gy+6;y<gy+gh;y+=6){ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx+gw,y);ctx.stroke();}}
-  function parseSvgPath(d){const pts=[],re=/[ML]\s*([\d.]+)[,\s]+([\d.]+)/g;let m;while((m=re.exec(d))!==null)pts.push({x:parseFloat(m[1]),y:parseFloat(m[2])});return pts;}
-  function stopExportRecord(){exportActive=false;if(exportRAF)cancelAnimationFrame(exportRAF);stopPlayback();if(exportRecorder&&exportRecorder.state!=='inactive')exportRecorder.stop();exportBtn.textContent='🎬';exportBtn.classList.remove('recording');document.getElementById('exportOverlay').classList.remove('active');}
-  function finalizeExport(){const blob=new Blob(exportChunks,{type:'video/webm'}),url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='taktik_'+Date.now()+'.webm';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
-
-  // INIT
-  function init(){
-    updatePlayers(); setupIconDragDrop(); setupResize();
-    document.addEventListener('keydown',e=>{if(e.code==='Space'&&!spacePressed){e.preventDefault();spacePressed=true;}});
-    document.addEventListener('keyup',e=>{if(e.code==='Space'){spacePressed=false;if(ballTraceActive)ballTraceActive=null;}});
-  }
+  // ── RESIZE ───────────────────────────────────────────────────────────
   function setupResize(){
-    resizeHandle.addEventListener('pointerdown',e=>{
-      e.preventDefault();resizing=true;
-      const rect=pitch.getBoundingClientRect();
-      resizeStartWidth=rect.width;resizeStartHeight=rect.height;
+    const handle=document.getElementById('resizeHandle');
+    handle.addEventListener('pointerdown',e=>{
+      e.preventDefault();e.stopPropagation();resizing=true;
+      resizeStartW=pitchWrapper.offsetWidth;resizeStartH=pitchWrapper.offsetHeight;
       resizeStartX=e.clientX;resizeStartY=e.clientY;
-      resizeHandle.setPointerCapture(e.pointerId);
+      handle.setPointerCapture(e.pointerId);
       window.addEventListener('pointermove',onResizeMove);
       window.addEventListener('pointerup',onResizeUp);
       window.addEventListener('pointercancel',onResizeUp);
@@ -758,166 +226,39 @@
   }
   function onResizeMove(e){
     if(!resizing)return;
-    pitch.style.width=Math.max(300,resizeStartWidth+e.clientX-resizeStartX)+'px';
-    pitch.style.height=Math.max(400,resizeStartHeight+e.clientY-resizeStartY)+'px';
+    pitchWrapper.style.width=Math.max(160,resizeStartW+(e.clientX-resizeStartX))+'px';
+    pitchWrapper.style.height=Math.max(160,resizeStartH+(e.clientY-resizeStartY))+'px';
   }
   function onResizeUp(e){
-    if(!resizing)return;
-    resizing=false;
-    resizeHandle.releasePointerCapture(e.pointerId);
+    if(!resizing)return;resizing=false;
+    document.getElementById('resizeHandle').releasePointerCapture(e.pointerId);
     window.removeEventListener('pointermove',onResizeMove);
     window.removeEventListener('pointerup',onResizeUp);
     window.removeEventListener('pointercancel',onResizeUp);
   }
-  function updatePlayers(){players.forEach(p=>p.el.remove());balls.forEach(b=>b.el.remove());traces.forEach(t=>t.remove());players=[];balls=[];traces=[];ballOwners.clear();}
 
-  // DRAG från toolbar
-  let draggingIcon=null, currentDragType=null;
-  function startIconDrag(e,type,iconEl){
-    e.preventDefault();e.stopPropagation();currentDragType=type;
-    draggingIcon=document.createElement('div');
-    draggingIcon.className='dragging-icon';
-    if(iconEl.querySelector('svg')){draggingIcon.innerHTML=iconEl.innerHTML;draggingIcon.style.fontSize='0';}
-    else draggingIcon.textContent=iconEl.textContent;
-    draggingIcon.style.left=e.clientX+'px';draggingIcon.style.top=e.clientY+'px';
-    document.body.appendChild(draggingIcon);
-    iconEl.style.opacity='0.3';
-    window.addEventListener('pointermove',onIconDragMove);
-    window.addEventListener('pointerup',onIconDragEnd);
-  }
-  function onIconDragMove(e){
-    if(!draggingIcon)return;
-    e.preventDefault();
-    draggingIcon.style.left=e.clientX+'px';
-    draggingIcon.style.top=e.clientY+'px';
-  }
-  function onIconDragEnd(e){
-    if(!draggingIcon)return;
-    e.preventDefault();
-    const pr=pitch.getBoundingClientRect(),x=e.clientX-pr.left,y=e.clientY-pr.top;
-    if(e.clientX>=pr.left&&e.clientX<=pr.right&&e.clientY>=pr.top&&e.clientY<=pr.bottom){
-      if(currentDragType==='player-left')createPlayer('L'+(++playerCounter),'left',x,y,playerCounter);
-      else if(currentDragType==='player-right')createPlayer('R'+(++playerCounter),'right',x,y,playerCounter);
-      else if(currentDragType==='cone')createCone('C'+(++coneCounter),x,y);
-      else if(currentDragType==='ball')createBall('B'+(balls.length+1),x,y);
-      else if(currentDragType==='goal-left')createGoal('GL'+(++goalCounter),'left',x,y);
-      else if(currentDragType==='goal-right')createGoal('GR'+(++goalCounter),'right',x,y);
-    }
-    document.body.removeChild(draggingIcon);draggingIcon=null;currentDragType=null;
-    document.querySelectorAll('.toolbar-icon').forEach(i=>i.style.opacity='1');
-    window.removeEventListener('pointermove',onIconDragMove);
-    window.removeEventListener('pointerup',onIconDragEnd);
-  }
-  function setupIconDragDrop(){}
-
-  // SKAPA OBJEKT
-  function createPlayer(id,side,x,y,num){
-    const el=document.createElement('div');
-    el.className='player '+side;el.id=id;el.textContent=num;
-    el.style.left=(x-18)+'px';el.style.top=(y-18)+'px';
-    pitch.appendChild(el);
-    const p={id,side,x,y,num,el,clickCount:0,clickTimer:null};
-    players.push(p);
-    el.addEventListener('pointerdown',e=>onPointerDown(e,p,'player'));
-    el.addEventListener('click',e=>handleObjectClick(e,p,'player'));
-  }
-  function createBall(id,x,y){
-    const el=document.createElement('div');
-    el.className='ball';el.id=id;
-    el.style.left=(x-10)+'px';el.style.top=(y-10)+'px';
-    pitch.appendChild(el);
-    const b={id,x,y,el,clickCount:0,clickTimer:null};
-    balls.push(b);
-    el.addEventListener('pointerdown',e=>onPointerDown(e,b,'ball'));
-    el.addEventListener('click',e=>handleObjectClick(e,b,'ball'));
-  }
-  function createCone(id,x,y){
-    const el=document.createElement('div');
-    el.className='cone';el.id=id;
-    el.style.left=(x-12)+'px';el.style.top=(y-10)+'px';
-    pitch.appendChild(el);
-    const c={id,x,y,el,clickCount:0,clickTimer:null};
-    cones.push(c);
-    el.addEventListener('pointerdown',e=>onPointerDown(e,c,'cone'));
-    el.addEventListener('click',e=>handleObjectClick(e,c,'cone'));
-  }
-  function createGoal(id,side,x,y){
-    const el=document.createElement('div');
-    el.className='goal';el.id=id;
-    el.style.cssText='position:absolute;width:80px;height:22px;border:3px solid rgba(255,255,255,0.9);background:rgba(255,255,255,0.15);cursor:grab;z-index:100;';
-    el.style.left=(x-40)+'px';el.style.top=(y-11)+'px';
-    pitch.appendChild(el);
-    const g={id,side,x,y,el,rotation:0,clickCount:0,clickTimer:null};
-    goals.push(g);
-    el.addEventListener('pointerdown',e=>onPointerDown(e,g,'goal'));
-    el.addEventListener('click',e=>handleObjectClick(e,g,'goal'));
+  // ── REC COL ──────────────────────────────────────────────────────────
+  function toggleRecCol(){
+    recCol.classList.toggle('open');
+    if(recCol.classList.contains('open')){buildPlaybackSteps();renderRecList();}
   }
 
-  // BOLLINTERAKTION
-  function checkBallOverlap(player){
-    for(const ball of balls){
-      const od=ballOwners.get(ball.id);
-      if(od&&od.playerId===player.id)continue;
-      const dx=ball.x-player.x,dy=ball.y-player.y;
-      if(Math.sqrt(dx*dx+dy*dy)<28){
-        ballOwners.set(ball.id,{playerId:player.id,lastX:player.x,lastY:player.y});
-        ball.el.classList.add('held');
-        if(recordMode&&currentRecording&&currentRecording.actorId===player.id){
-          if(currentRecording.heldBalls.length===0){
-            recordings.push(currentRecording);
-            const pr2=pitch.getBoundingClientRect(),now=performance.now();
-            currentRecording={
-              id:'REC'+(recordings.length+1),actorId:player.id,step:recordings.length+1,
-              startTime:now,frames:[],heldBalls:[ball.id],
-              startPos:{xRel:player.x/pr2.width,yRel:player.y/pr2.height}
-            };
-            currentRecording.frames.push({t:0,xRel:currentRecording.startPos.xRel,yRel:currentRecording.startPos.yRel});
-          }else if(!currentRecording.heldBalls.includes(ball.id))currentRecording.heldBalls.push(ball.id);
-        }
-      }
-    }
-  }
-  function releaseBall(playerId){
-    for(const[ballId,od]of ballOwners.entries()){
-      if(od.playerId===playerId){
-        ballOwners.delete(ballId);
-        const ball=balls.find(b=>b.id===ballId);
-        if(ball)ball.el.classList.remove('held');
-      }
-    }
-  }
-  function checkBallInGoal(ball){
-    const pr=pitch.getBoundingClientRect();
-    for(const id of['goalLeft','goalRight']){
-      const el=document.getElementById(id);
-      if(!el||!showGoals)continue;
-      const gr=el.getBoundingClientRect(),gx=gr.left-pr.left+gr.width/2,gy=gr.top-pr.top+gr.height/2;
-      if(Math.abs(ball.x-gx)<gr.width/2&&Math.abs(ball.y-gy)<gr.height/2){
-        el.style.boxShadow='0 0 14px 5px #ffeb3b';
-        setTimeout(()=>el.style.boxShadow='',700);
-      }
-    }
-    for(const goal of goals){
-      const gr=goal.el.getBoundingClientRect(),gx=gr.left-pr.left+gr.width/2,gy=gr.top-pr.top+gr.height/2;
-      if(Math.abs(ball.x-gx)<gr.width/2+5&&Math.abs(ball.y-gy)<gr.height/2+5){
-        goal.el.style.boxShadow='0 0 14px 5px #ffeb3b';
-        setTimeout(()=>goal.el.style.boxShadow='',700);
-      }
-    }
-  }
-
-  // POINTER
+  // ── POINTER ── (exakt från fungerande version) ────────────────────────
   function onPointerDown(e,obj,type){
     e.preventDefault();e.stopPropagation();
     const el=obj.el,rect=el.getBoundingClientRect(),pr=pitch.getBoundingClientRect();
-    const radius=type==='ball'?10:type==='cone'?12:type==='goal'?40:18;
+    const radius=type==='ball'?9:type==='cone'?10:type==='goal'?16:16;
     el.setPointerCapture(e.pointerId);
     dragInfo={obj,type,el,offsetX:e.clientX-rect.left-radius,offsetY:e.clientY-rect.top-radius,pitchRect:pr};
     if(recordMode){
       const p2=pitch.getBoundingClientRect();
       currentRecording={
-        id:'REC'+(recordings.length+1),actorId:obj.id,step:recordings.length+1,
-        startTime:performance.now(),frames:[],heldBalls:[],
+        id:'REC'+(recordings.length+1),
+        actorId:obj.id,
+        step:recordings.length+1,
+        startTime:performance.now(),
+        frames:[],
+        heldBalls:[],
         startPos:{xRel:obj.x/p2.width,yRel:obj.y/p2.height}
       };
       currentRecording.frames.push({t:0,xRel:currentRecording.startPos.xRel,yRel:currentRecording.startPos.yRel});
@@ -925,117 +266,274 @@
     window.addEventListener('pointermove',onPointerMove);
     window.addEventListener('pointerup',onPointerUp);
   }
+
   function onPointerMove(e){
     if(!dragInfo)return;
     const{obj,type,el,offsetX,offsetY,pitchRect}=dragInfo;
-    const radius=type==='ball'?10:type==='cone'?8:type==='goal'?40:18;
-    let x=e.clientX-pitchRect.left-offsetX,y=e.clientY-pitchRect.top-offsetY;
+    const radius=type==='ball'?9:type==='cone'?8:type==='goal'?16:16;
+    let x=e.clientX-pitchRect.left-offsetX, y=e.clientY-pitchRect.top-offsetY;
     if(type!=='ball'){
       x=Math.max(radius,Math.min(pitchRect.width-radius,x));
       y=Math.max(radius,Math.min(pitchRect.height-radius,y));
     }else{
-      x=Math.max(radius-100,Math.min(pitchRect.width-radius+100,x));
-      y=Math.max(radius-100,Math.min(pitchRect.height-radius+100,y));
+      x=Math.max(radius-60,Math.min(pitchRect.width-radius+60,x));
+      y=Math.max(radius-60,Math.min(pitchRect.height-radius+60,y));
     }
-    el.style.left=(x-radius)+'px';el.style.top=(y-radius)+'px';
-    obj.x=x;obj.y=y;
-    if(type==='ball')checkBallInGoal(obj);
+    el.style.left=(x-radius)+'px'; el.style.top=(y-radius)+'px';
+    obj.x=x; obj.y=y;
+
+    if(type==='ball') checkBallInGoal(obj);
+
     if(type==='player'){
       checkBallOverlap(obj);
+      // Move held balls (position-only during drag, angle-based during playback)
       for(const ball of balls){
         const od=ballOwners.get(ball.id);
         if(od&&od.playerId===obj.id){
           const angle=Math.atan2(y-od.lastY,x-od.lastX);
-          ball.x=x+Math.cos(angle)*25;
-          ball.y=y+Math.sin(angle)*25;
-          ball.el.style.left=(ball.x-10)+'px';
-          ball.el.style.top=(ball.y-10)+'px';
-          od.lastX=x;od.lastY=y;
+          ball.x=x+Math.cos(angle)*22;
+          ball.y=y+Math.sin(angle)*22;
+          ball.el.style.left=(ball.x-9)+'px';
+          ball.el.style.top=(ball.y-9)+'px';
+          od.lastX=x; od.lastY=y;
         }
       }
     }
+
     if(currentRecording&&currentRecording.actorId===obj.id){
       const t=(performance.now()-currentRecording.startTime)/1000;
       currentRecording.frames.push({t,xRel:x/pitchRect.width,yRel:y/pitchRect.height});
     }
+
     if(type==='ball'&&spacePressed){
-      if(!ballTraceActive||ballTraceActive.ball!==obj)ballTraceActive={ball:obj,points:[]};
-      ballTraceActive.points.push({x,y});drawTrace(ballTraceActive);
+      if(!ballTraceActive||ballTraceActive.ball!==obj) ballTraceActive={ball:obj,points:[]};
+      ballTraceActive.points.push({x,y}); drawTrace(ballTraceActive);
     }
   }
+
   function onPointerUp(e){
     if(!dragInfo)return;
     const{el,obj,type}=dragInfo;
     el.releasePointerCapture(e.pointerId);
-    if(type==='player')releaseBall(obj.id);
+    if(type==='player') releaseBall(obj.id);
     if(currentRecording&&currentRecording.actorId===obj.id){
       recordings.push(currentRecording);
       currentRecording=null;
-      renderRecList();buildPlaybackSteps();
+      renderRecList();
+      buildPlaybackSteps();
     }
     dragInfo=null;
     window.removeEventListener('pointermove',onPointerMove);
     window.removeEventListener('pointerup',onPointerUp);
   }
 
-  // SPÅRNING
-  function drawTrace(traceData){
-    const points=traceData.points;if(points.length<2)return;
-    let svg=traces.find(t=>t.dataset.ball===traceData.ball.id);
-    if(!svg){
-      svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
-      svg.classList.add('trace');svg.dataset.ball=traceData.ball.id;
-      svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';
-      pitch.appendChild(svg);traces.push(svg);
+  // ── BALL ── (exakt från fungerande version) ───────────────────────────
+  function checkBallOverlap(player){
+    for(const ball of balls){
+      const od=ballOwners.get(ball.id);
+      if(od&&od.playerId===player.id) continue;
+      const dx=ball.x-player.x, dy=ball.y-player.y;
+      if(Math.sqrt(dx*dx+dy*dy)<26){
+        ballOwners.set(ball.id,{playerId:player.id,lastX:player.x,lastY:player.y});
+        ball.el.classList.add('held');
+        // När spelaren plockar upp bollen: spara nuvarande REC, starta ny med heldBalls
+        if(recordMode&&currentRecording&&currentRecording.actorId===player.id){
+          if(currentRecording.heldBalls.length===0){
+            // Spara rörelsen INNAN bollplockning
+            recordings.push(currentRecording);
+            const pr2=pitch.getBoundingClientRect(), now=performance.now();
+            currentRecording={
+              id:'REC'+(recordings.length+1),
+              actorId:player.id,
+              step:recordings.length+1,
+              startTime:now,
+              frames:[],
+              heldBalls:[ball.id],
+              startPos:{xRel:player.x/pr2.width,yRel:player.y/pr2.height}
+            };
+            currentRecording.frames.push({t:0,xRel:currentRecording.startPos.xRel,yRel:currentRecording.startPos.yRel});
+          } else if(!currentRecording.heldBalls.includes(ball.id)){
+            currentRecording.heldBalls.push(ball.id);
+          }
+        }
+      }
     }
-    svg.innerHTML='';
-    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
-    let d='M '+points[0].x+' '+points[0].y;
-    for(let i=1;i<points.length;i++)d+=' L '+points[i].x+' '+points[i].y;
-    path.setAttribute('d',d);
-    path.setAttribute('stroke','#ffeb3b');
-    path.setAttribute('stroke-width','3');
-    path.setAttribute('fill','none');
-    svg.appendChild(path);
   }
 
-  // PLAN & LINJER
-  function setGoalVisibility(show){showGoals=show;pitch.querySelectorAll('.goal').forEach(g=>g.style.display=show?'block':'none');}
-  function resetPositions(){updatePlayers();cones.forEach(c=>c.el.remove());cones=[];coneCounter=0;goals.forEach(g=>g.el.remove());goals=[];goalCounter=0;traces.forEach(t=>t.remove());traces=[];ballTraceActive=null;ballOwners.clear();}
-  function toggleLine(id){
-    const el=document.getElementById(id);
-    const cb=document.getElementById('show'+id.charAt(0).toUpperCase()+id.slice(1));
-    if(el)el.style.display=cb&&cb.checked?'block':'none';
+  function releaseBall(playerId){
+    for(const[ballId,od]of ballOwners.entries()){
+      if(od.playerId===playerId){
+        ballOwners.delete(ballId);
+        const ball=balls.find(b=>b.id===ballId);
+        if(ball) ball.el.classList.remove('held');
+      }
+    }
   }
-  function togglePenaltyBoxes(){const show=document.getElementById('showPenaltyBoxes').checked;document.getElementById('penaltyLeft').style.display=show?'block':'none';document.getElementById('penaltyRight').style.display=show?'block':'none';}
-  function toggleGoalAreas(){const show=document.getElementById('showGoalAreas').checked;document.getElementById('goalAreaLeft').style.display=show?'block':'none';document.getElementById('goalAreaRight').style.display=show?'block':'none';}
-  function updateCircleSize(size){const c=document.getElementById('centerCircle');if(c){c.style.width=size+'px';c.style.height=size+'px';}}
 
-  // INSPELNING
+  function checkBallInGoal(ball){
+    const pr=pitch.getBoundingClientRect();
+    for(const id of['goalTop','goalBottom']){
+      const el=document.getElementById(id);if(!el||!showGoals)continue;
+      const gr=el.getBoundingClientRect(),gx=gr.left-pr.left+gr.width/2,gy=gr.top-pr.top+gr.height/2;
+      if(Math.abs(ball.x-gx)<gr.width/2&&Math.abs(ball.y-gy)<gr.height/2){
+        el.style.boxShadow='0 0 14px 5px #ffeb3b';setTimeout(()=>el.style.boxShadow='',700);
+      }
+    }
+    for(const goal of goals){
+      const gr=goal.el.getBoundingClientRect(),gx=gr.left-pr.left+gr.width/2,gy=gr.top-pr.top+gr.height/2;
+      if(Math.abs(ball.x-gx)<gr.width/2+5&&Math.abs(ball.y-gy)<gr.height/2+5){
+        goal.el.style.boxShadow='0 0 14px 5px #ffeb3b';setTimeout(()=>goal.el.style.boxShadow='',700);
+      }
+    }
+  }
+
+  // ── TRANSPORT ────────────────────────────────────────────────────────
+  function getCurrentTime(){
+    if(!playbackTotalDur)return 0;
+    if(isPaused)return playbackPauseOffset%playbackTotalDur;
+    return((performance.now()-playbackStartWall)/1000+playbackPauseOffset)%playbackTotalDur;
+  }
+  function seekTo(t){
+    t=Math.max(0,Math.min(playbackTotalDur||0,t));
+    playbackPauseOffset=t;playbackStartWall=performance.now();
+    applyFrameAtTime(t);updateTransportUI(t);
+  }
+  function scrubRelative(d){if(playbackTotalDur)seekTo(getCurrentTime()+d);}
+  function stepForward(){
+    if(!playbackSteps.length)return;
+    const t=getCurrentTime();let acc=0;
+    for(const s of playbackSteps){acc+=s.duration;if(acc>t+0.01){seekTo(acc-s.duration+0.001);return;}}
+    seekTo(playbackTotalDur);
+  }
+  function stepBack(){
+    if(!playbackSteps.length)return;
+    const t=getCurrentTime();let acc=0,prev=0;
+    for(const s of playbackSteps){if(acc+s.duration>t-0.01){seekTo(prev);return;}prev=acc;acc+=s.duration;}
+    seekTo(0);
+  }
+  function togglePlayPause(){
+    if(!playbackSteps.length){buildPlaybackSteps();if(!playbackSteps.length)return;}
+    if(isPlaying&&!isPaused){
+      playbackPauseOffset=getCurrentTime();isPaused=true;isPlaying=false;
+      if(playbackRequestId)cancelAnimationFrame(playbackRequestId);
+      panelPlayBtn.textContent='▶';panelPlayBtn.classList.add('paused');
+    }else{
+      playbackStartWall=performance.now();isPaused=false;isPlaying=true;
+      panelPlayBtn.textContent='⏸';panelPlayBtn.classList.remove('paused');
+      playbackLoop();
+    }
+  }
+  function stopAndReset(){
+    isPlaying=false;isPaused=false;playbackPauseOffset=0;
+    if(playbackRequestId)cancelAnimationFrame(playbackRequestId);
+    panelPlayBtn.textContent='▶';panelPlayBtn.classList.remove('paused');
+    if(playbackSteps.length)applyFrameAtTime(0);
+    updateTransportUI(0);
+    document.querySelectorAll('.rec-row').forEach(r=>r.classList.remove('playing'));
+  }
+
+  // ── PLAYBACK ── (exakt från fungerande version) ───────────────────────
+  function buildPlaybackSteps(){
+    if(!recordings.length)return;
+    const byStep=new Map();
+    for(const rec of recordings){
+      if(!byStep.has(rec.step))byStep.set(rec.step,[]);
+      byStep.get(rec.step).push(rec);
+    }
+    playbackSteps=[];
+    for(const step of Array.from(byStep.keys()).sort((a,b)=>a-b)){
+      const recs=byStep.get(step);let maxDur=0;
+      for(const rec of recs){if(rec.frames.length<2)continue;maxDur=Math.max(maxDur,rec.frames.at(-1).t-rec.frames[0].t);}
+      playbackSteps.push({step,recs,duration:maxDur});
+    }
+    playbackTotalDur=playbackSteps.reduce((s,p)=>s+p.duration,0);
+    stepTotal.textContent=playbackSteps.length;
+  }
+
+  function applyFrameAtTime(tWrapped){
+    if(!playbackSteps.length)return;
+    const pr=pitch.getBoundingClientRect();
+    let acc=0,current=playbackSteps[0],stepIdx=0;
+    for(let i=0;i<playbackSteps.length;i++){
+      const s=playbackSteps[i];
+      if(tWrapped>=acc&&tWrapped<acc+s.duration){current=s;stepIdx=i;break;}
+      acc+=s.duration;
+    }
+    const localT=tWrapped-acc;
+    const activeIds=new Set();
+    for(const rec of current.recs){
+      if(!rec.frames||rec.frames.length<2)continue;
+      activeIds.add(rec.id);
+      const t0=rec.frames[0].t,tEnd=rec.frames.at(-1).t;
+      const t=t0+Math.min(localT,(tEnd-t0)||0.001);
+      let i=0;while(i<rec.frames.length-1&&rec.frames[i+1].t<t)i++;
+      const fA=rec.frames[i],fB=rec.frames[Math.min(i+1,rec.frames.length-1)];
+      const u=Math.max(0,Math.min(1,(t-fA.t)/((fB.t-fA.t)||1e-6)));
+      const x=(fA.xRel+(fB.xRel-fA.xRel)*u)*pr.width;
+      const y=(fA.yRel+(fB.yRel-fA.yRel)*u)*pr.height;
+      const obj=[...players,...balls,...cones,...goals].find(o=>o.id===rec.actorId);
+      if(obj){
+        const r=obj.el.classList.contains('ball')?9:obj.el.classList.contains('cone')?9:16;
+        obj.el.style.left=(x-r)+'px';obj.el.style.top=(y-r)+'px';obj.x=x;obj.y=y;
+        // Boll som spelare bär: placeras med vinkel framför spelaren
+        if(rec.heldBalls&&rec.heldBalls.length){
+          const px=i>0?rec.frames[i-1].xRel*pr.width:x;
+          const py=i>0?rec.frames[i-1].yRel*pr.height:y;
+          const angle=Math.atan2(y-py,x-px);
+          for(const bid of rec.heldBalls){
+            const ball=balls.find(b=>b.id===bid);
+            if(ball){
+              ball.x=x+Math.cos(angle)*22;
+              ball.y=y+Math.sin(angle)*22;
+              ball.el.style.left=(ball.x-9)+'px';
+              ball.el.style.top=(ball.y-9)+'px';
+            }
+          }
+        }
+      }
+    }
+    document.querySelectorAll('.rec-row').forEach(row=>row.classList.toggle('playing',activeIds.has(row.dataset.recId)));
+    stepLabel.textContent=stepIdx+1;
+  }
+
+  function updateTransportUI(t){
+    timeLabel.textContent=t.toFixed(1)+'s';
+    if(playbackTotalDur>0)scrubber.value=Math.round((t/playbackTotalDur)*1000);
+  }
+  function onScrubInput(val){
+    if(!playbackTotalDur)return;
+    if(isPlaying&&!isPaused){isPaused=true;isPlaying=false;if(playbackRequestId)cancelAnimationFrame(playbackRequestId);panelPlayBtn.textContent='▶';panelPlayBtn.classList.add('paused');}
+    const t=(val/1000)*playbackTotalDur;playbackPauseOffset=t;applyFrameAtTime(t);updateTransportUI(t);
+  }
+  function stopPlayback(){isPlaying=false;isPaused=false;if(playbackRequestId)cancelAnimationFrame(playbackRequestId);panelPlayBtn.textContent='▶';panelPlayBtn.classList.remove('paused');document.querySelectorAll('.rec-row').forEach(r=>r.classList.remove('playing'));}
+  function playbackLoop(){
+    if(!isPlaying||!playbackSteps.length)return;
+    const tRaw=(performance.now()-playbackStartWall)/1000+playbackPauseOffset;
+    const tW=playbackTotalDur>0?tRaw%playbackTotalDur:0;
+    applyFrameAtTime(tW);updateTransportUI(tW);
+    playbackRequestId=requestAnimationFrame(playbackLoop);
+  }
+
+  // ── RECORDING ─────────────────────────────────────────────────────────
   function toggleRecord(){
     recordMode=!recordMode;
-    recordBtn.classList.toggle('active',recordMode);
-    recordMode ? recordBtn.textContent='⏺ Spelar...' : recordBtn.textContent='🔴 REC';
+    recordMode?recordBtn.textContent='⏺ Spelar...':recordBtn.textContent='🔴 REC';
     if(recordMode){
       const pr=pitch.getBoundingClientRect();
       if(!recordings.find(r=>r.id==='REC1')){
-        const rec1={id:'REC1',actorId:'ALL',step:1,frames:[],snapshot:[]};
+        const rec1={id:'REC1',actorId:'ALL',step:1,frames:[],heldBalls:[],snapshot:[]};
         [...players,...balls,...cones,...goals].forEach(obj=>rec1.snapshot.push({id:obj.id,xRel:obj.x/pr.width,yRel:obj.y/pr.height}));
         recordings.unshift(rec1);renderRecList();
       }
     }else if(currentRecording){
-      recordings.push(currentRecording);
-      currentRecording=null;renderRecList();buildPlaybackSteps();
+      recordings.push(currentRecording);currentRecording=null;renderRecList();buildPlaybackSteps();
     }
   }
-  function renderRecList(activeRecIds){
+  function renderRecList(){
     recList.innerHTML='';
-    if(!recordings.length){
-      recList.innerHTML='<p style="color:#777;font-size:0.78rem;padding:4px;">Inga inspelningar</p>';return;
-    }
+    if(!recordings.length){recList.innerHTML='<p style="color:#777;font-size:0.76rem;padding:4px;">Inga inspelningar</p>';return;}
     recordings.forEach((rec,index)=>{
       const row=document.createElement('div');row.className='rec-row';row.dataset.recId=rec.id;
-      if(activeRecIds&&activeRecIds.has(rec.id))row.classList.add('playing');
       const label=document.createElement('span');label.textContent=rec.id+' ('+rec.actorId+')';label.title=label.textContent;
       const input=document.createElement('input');input.type='number';input.min='1';input.value=rec.step;
       input.addEventListener('change',()=>{const v=parseInt(input.value,10);rec.step=isNaN(v)||v<1?1:v;input.value=rec.step;buildPlaybackSteps();});
@@ -1044,25 +542,14 @@
       row.appendChild(label);row.appendChild(input);row.appendChild(delBtn);recList.appendChild(row);
     });
   }
-
-  // UPPSPELNING LOOP
-  function stopPlayback(){isPlaying=false;isPaused=false;if(playbackRequestId)cancelAnimationFrame(playbackRequestId);panelPlayBtn.textContent='▶';panelPlayBtn.classList.remove('paused');document.querySelectorAll('.rec-row').forEach(r=>r.classList.remove('playing'));}
-  function playbackLoop(){
-    if(!isPlaying||!playbackSteps.length)return;
-    const tRaw=(performance.now()-playbackStartWall)/1000+playbackPauseOffset;
-    const tWrapped=playbackTotalDur>0?tRaw%playbackTotalDur:0;
-    applyFrameAtTime(tWrapped);updateTransportUI(tWrapped);
-    playbackRequestId=requestAnimationFrame(playbackLoop);
-  }
   function restoreFromREC1(){
     const rec1=recordings.find(r=>r.id==='REC1');
-    if(!rec1){alert('Ingen startsnapshot hittad.');return;}
-    if(!rec1.snapshot||!rec1.snapshot.length){alert('REC1 saknar snapshot.');return;}
+    if(!rec1||!rec1.snapshot||!rec1.snapshot.length){alert('Ingen startsnapshot.');return;}
     const pr=pitch.getBoundingClientRect();
     rec1.snapshot.forEach(snap=>{
       const obj=[...players,...balls,...cones,...goals].find(o=>o.id===snap.id);if(!obj)return;
       const x=snap.xRel*pr.width,y=snap.yRel*pr.height;
-      const r=obj.el.classList.contains('ball')?10:obj.el.classList.contains('cone')?8:obj.el.classList.contains('goal')?40:18;
+      const r=obj.el.classList.contains('ball')?9:obj.el.classList.contains('cone')?9:16;
       obj.x=x;obj.y=y;obj.el.style.left=(x-r)+'px';obj.el.style.top=(y-r)+'px';
     });
     ballOwners.clear();balls.forEach(b=>b.el.classList.remove('held'));
@@ -1070,14 +557,99 @@
   function clearRecordings(){
     if(confirm('Rensa alla inspelningar?')){
       recordings=[];currentRecording=null;recordMode=false;
-      recordBtn.classList.remove('active');recordBtn.textContent='🔴 REC';
-      stopPlayback();playbackSteps=[];playbackTotalDur=0;
+      recordBtn.textContent='🔴 REC';stopPlayback();playbackSteps=[];playbackTotalDur=0;
       renderRecList();stepLabel.textContent='–';stepTotal.textContent='–';timeLabel.textContent='0.0s';scrubber.value=0;
     }
   }
+
+  // ── ICON DRAG ─────────────────────────────────────────────────────────
+  let draggingIcon=null,currentDragType=null;
+  function startIconDrag(e,type,iconEl){
+    e.preventDefault();e.stopPropagation();currentDragType=type;
+    draggingIcon=document.createElement('div');draggingIcon.className='dragging-icon';
+    if(iconEl.querySelector('svg')){draggingIcon.innerHTML=iconEl.innerHTML;draggingIcon.style.fontSize='0';}
+    else draggingIcon.textContent=iconEl.textContent;
+    draggingIcon.style.left=e.clientX+'px';draggingIcon.style.top=e.clientY+'px';
+    document.body.appendChild(draggingIcon);iconEl.style.opacity='0.3';
+    window.addEventListener('pointermove',onIconDragMove);
+    window.addEventListener('pointerup',onIconDragEnd);
+  }
+  function onIconDragMove(e){if(!draggingIcon)return;e.preventDefault();draggingIcon.style.left=e.clientX+'px';draggingIcon.style.top=e.clientY+'px';}
+  function onIconDragEnd(e){
+    if(!draggingIcon)return;e.preventDefault();
+    const pr=pitch.getBoundingClientRect(),x=e.clientX-pr.left,y=e.clientY-pr.top;
+    if(e.clientX>=pr.left&&e.clientX<=pr.right&&e.clientY>=pr.top&&e.clientY<=pr.bottom){
+      if(currentDragType==='player-left')createPlayer('L'+(++playerCounter),'left',x,y,playerCounter);
+      else if(currentDragType==='player-right')createPlayer('R'+(++playerCounter),'right',x,y,playerCounter);
+      else if(currentDragType==='cone')createCone('C'+(++coneCounter),x,y);
+      else if(currentDragType==='ball')createBall('B'+(balls.length+1),x,y);
+      else if(currentDragType==='goal-top')createGoal('GT'+(++goalCounter),'top',x,y);
+      else if(currentDragType==='goal-bottom')createGoal('GB'+(++goalCounter),'bottom',x,y);
+    }
+    document.body.removeChild(draggingIcon);draggingIcon=null;currentDragType=null;
+    document.querySelectorAll('.toolbar-icon').forEach(i=>i.style.opacity='1');
+    window.removeEventListener('pointermove',onIconDragMove);
+    window.removeEventListener('pointerup',onIconDragEnd);
+  }
+
+  // ── CREATE OBJECTS ────────────────────────────────────────────────────
+  function createPlayer(id,side,x,y,num){
+    const el=document.createElement('div');el.className='player '+side;el.id=id;el.textContent=num;
+    el.style.left=(x-16)+'px';el.style.top=(y-16)+'px';
+    pitch.appendChild(el);
+    const p={id,side,x,y,num,el,clickCount:0,clickTimer:null};players.push(p);
+    el.addEventListener('pointerdown',e=>onPointerDown(e,p,'player'));
+    el.addEventListener('click',e=>handleObjectClick(e,p,'player'));
+  }
+  function createBall(id,x,y){
+    const el=document.createElement('div');el.className='ball';el.id=id;
+    el.style.left=(x-9)+'px';el.style.top=(y-9)+'px';
+    pitch.appendChild(el);
+    const b={id,x,y,el,clickCount:0,clickTimer:null};balls.push(b);
+    el.addEventListener('pointerdown',e=>onPointerDown(e,b,'ball'));
+    el.addEventListener('click',e=>handleObjectClick(e,b,'ball'));
+  }
+  function createCone(id,x,y){
+    const el=document.createElement('div');el.className='cone';el.id=id;
+    el.style.left=(x-10)+'px';el.style.top=(y-9)+'px';
+    pitch.appendChild(el);
+    const c={id,x,y,el,clickCount:0,clickTimer:null};cones.push(c);
+    el.addEventListener('pointerdown',e=>onPointerDown(e,c,'cone'));
+    el.addEventListener('click',e=>handleObjectClick(e,c,'cone'));
+  }
+  function createGoal(id,side,x,y){
+    const el=document.createElement('div');
+    el.style.cssText='position:absolute;width:12%;padding-bottom:3.5%;border:3px solid rgba(255,255,255,0.9);background:rgba(255,255,255,0.15);cursor:grab;z-index:100;border-radius:3px;';
+    el.id=id;el.classList.add('goal-obj');
+    const pr=pitch.getBoundingClientRect();
+    el.style.left=((x/pr.width)*100-6)+'%';el.style.top=((y/pr.height)*100-2)+'%';
+    pitch.appendChild(el);
+    const g={id,side,x,y,el,rotation:0,clickCount:0,clickTimer:null};goals.push(g);
+    el.addEventListener('pointerdown',e=>onPointerDown(e,g,'goal'));
+    el.addEventListener('click',e=>handleObjectClick(e,g,'goal'));
+  }
+
+  // ── TRACE ─────────────────────────────────────────────────────────────
+  function drawTrace(td){
+    const pts=td.points;if(pts.length<2)return;
+    let svg=traces.find(t=>t.dataset.ball===td.ball.id);
+    if(!svg){svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('trace');svg.dataset.ball=td.ball.id;svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';pitch.appendChild(svg);traces.push(svg);}
+    svg.innerHTML='';
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    let d='M '+pts[0].x+' '+pts[0].y;for(let i=1;i<pts.length;i++)d+=' L '+pts[i].x+' '+pts[i].y;
+    path.setAttribute('d',d);path.setAttribute('stroke','#ffeb3b');path.setAttribute('stroke-width','3');path.setAttribute('fill','none');svg.appendChild(path);
+  }
+
+  // ── LINE CONTROLS ─────────────────────────────────────────────────────
+  function setGoalVisibility(show){showGoals=show;['goalTop','goalBottom'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=show?'block':'none';});goals.forEach(g=>g.el.style.display=show?'block':'none');}
+  function resetPositions(){players.forEach(p=>p.el.remove());balls.forEach(b=>b.el.remove());cones.forEach(c=>c.el.remove());goals.forEach(g=>g.el.remove());traces.forEach(t=>t.remove());players=[];balls=[];cones=[];goals=[];traces=[];playerCounter=0;coneCounter=0;goalCounter=0;ballOwners.clear();ballTraceActive=null;}
+  function toggleLine(id){const el=document.getElementById(id);const cb=document.getElementById('show'+id.charAt(0).toUpperCase()+id.slice(1));if(el)el.style.display=cb&&cb.checked?'block':'none';}
+  function togglePenaltyBoxes(){const show=document.getElementById('showPenaltyBoxes').checked;['penaltyTop','penaltyBottom'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=show?'block':'none';});}
+  function toggleGoalAreas(){const show=document.getElementById('showGoalAreas').checked;['goalAreaTop','goalAreaBottom'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=show?'block':'none';});}
+
+  // ── OBJECT CLICK (dubbel=rotera mål, trippel=ta bort) ─────────────────
   function handleObjectClick(e,obj,type){
-    e.stopPropagation();
-    obj.clickCount=(obj.clickCount||0)+1;
+    e.stopPropagation();obj.clickCount=(obj.clickCount||0)+1;
     if(obj.clickTimer)clearTimeout(obj.clickTimer);
     obj.clickTimer=setTimeout(()=>{
       if(obj.clickCount===2&&type==='goal'){obj.rotation=(obj.rotation+45)%360;obj.el.style.transform='rotate('+obj.rotation+'deg)';}
@@ -1093,6 +665,49 @@
     else if(type==='goal'){const i=goals.indexOf(obj);if(i>-1)goals.splice(i,1);}
   }
 
+  // ── VIDEO EXPORT ──────────────────────────────────────────────────────
+  function toggleExportRecord(){if(!exportActive)startExportRecord();else stopExportRecord();}
+  function startExportRecord(){
+    if(!recordings.length){alert('Spela in rörelser först.');return;}
+    const pr=pitch.getBoundingClientRect();
+    exportCanvas=document.createElement('canvas');exportCanvas.width=Math.round(pr.width);exportCanvas.height=Math.round(pr.height);
+    exportCtx=exportCanvas.getContext('2d');
+    const mime=MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':MediaRecorder.isTypeSupported('video/webm;codecs=vp8')?'video/webm;codecs=vp8':'video/webm';
+    exportStream=exportCanvas.captureStream(30);exportRecorder=new MediaRecorder(exportStream,{mimeType:mime,videoBitsPerSecond:4000000});
+    exportChunks=[];exportRecorder.ondataavailable=e=>{if(e.data.size>0)exportChunks.push(e.data);};exportRecorder.onstop=finalizeExport;exportRecorder.start(100);
+    exportActive=true;exportStartTime=performance.now();exportBtn.textContent='Stoppa';exportBtn.classList.add('recording');
+    document.getElementById('exportOverlay').classList.add('active');
+    buildPlaybackSteps();isPlaying=true;isPaused=false;playbackPauseOffset=0;playbackStartWall=performance.now();playbackLoop();exportDrawLoop();
+  }
+  function exportDrawLoop(){
+    if(!exportActive)return;
+    const pr=pitch.getBoundingClientRect(),cw=exportCanvas.width,ch=exportCanvas.height,ctx=exportCtx;
+    const grad=ctx.createLinearGradient(0,0,0,ch);grad.addColorStop(0,'#2d5f3f');grad.addColorStop(1,'#1f4d2f');
+    ctx.fillStyle=grad;ctx.fillRect(0,0,cw,ch);ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=3;ctx.strokeRect(1.5,1.5,cw-3,ch-3);
+    const lc='rgba(255,255,255,0.8)';
+    if(document.getElementById('showMidline').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,ch/2);ctx.lineTo(cw,ch/2);ctx.stroke();}
+    if(document.getElementById('showCenterCircle').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;ctx.beginPath();ctx.arc(cw/2,ch/2,cw*0.11,0,Math.PI*2);ctx.stroke();}
+    if(document.getElementById('showCenterSpot').checked){ctx.fillStyle=lc;ctx.beginPath();ctx.arc(cw/2,ch/2,3,0,Math.PI*2);ctx.fill();}
+    if(document.getElementById('showPenaltyBoxes').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;const pw=cw*0.4,ph=ch*0.15;ctx.strokeRect((cw-pw)/2,0,pw,ph);ctx.strokeRect((cw-pw)/2,ch-ph,pw,ph);}
+    if(document.getElementById('showGoalAreas').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;const gaw=cw*0.22,gah=ch*0.08;ctx.strokeRect((cw-gaw)/2,0,gaw,gah);ctx.strokeRect((cw-gaw)/2,ch-gah,gaw,gah);}
+    if(showGoals){drawFixedGoal(ctx,cw,ch,'top');drawFixedGoal(ctx,cw,ch,'bottom');}
+    for(const cone of cones){ctx.beginPath();ctx.moveTo(cone.x,cone.y-9);ctx.lineTo(cone.x-10,cone.y+9);ctx.lineTo(cone.x+10,cone.y+9);ctx.closePath();ctx.fillStyle='#ffd700';ctx.fill();}
+    for(const ball of balls){const rg=ctx.createRadialGradient(ball.x-2,ball.y-2,1,ball.x,ball.y,9);rg.addColorStop(0,'#fff');rg.addColorStop(0.5,'#f0f0f0');rg.addColorStop(1,'#d0d0d0');ctx.beginPath();ctx.arc(ball.x,ball.y,9,0,Math.PI*2);ctx.fillStyle=rg;ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    for(const p of players){const isLeft=p.side==='left';const rg=ctx.createLinearGradient(p.x-16,p.y-16,p.x+16,p.y+16);if(isLeft){rg.addColorStop(0,'#3498db');rg.addColorStop(1,'#2980b9');}else{rg.addColorStop(0,'#e74c3c');rg.addColorStop(1,'#c0392b');}ctx.beginPath();ctx.arc(p.x,p.y,16,0,Math.PI*2);ctx.fillStyle=rg;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(p.num),p.x,p.y);}
+    const pct=Math.min(100,playbackTotalDur>0?(performance.now()-playbackStartWall)/1000/playbackTotalDur*100:0);
+    document.getElementById('exportProgressBar').style.width=pct+'%';
+    document.getElementById('exportStatus').textContent='Spelar in... '+((performance.now()-exportStartTime)/1000).toFixed(1)+'s';
+    exportRAF=requestAnimationFrame(exportDrawLoop);
+  }
+  function drawFixedGoal(ctx,cw,ch,pos){const gw=cw*0.12,gh=ch*0.035,gx=(cw-gw)/2,gy=pos==='top'?-gh:ch;ctx.fillStyle='rgba(255,255,255,0.1)';ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.fillRect(gx,gy,gw,gh);ctx.strokeRect(gx,gy,gw,gh);}
+  function stopExportRecord(){exportActive=false;if(exportRAF)cancelAnimationFrame(exportRAF);stopPlayback();if(exportRecorder&&exportRecorder.state!=='inactive')exportRecorder.stop();exportBtn.textContent='🎬';exportBtn.classList.remove('recording');document.getElementById('exportOverlay').classList.remove('active');}
+  function finalizeExport(){const blob=new Blob(exportChunks,{type:'video/webm'}),url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='taktik_'+Date.now()+'.webm';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
+
+  function init(){
+    initPitchSize();setupResize();
+    document.addEventListener('keydown',e=>{if(e.code==='Space'&&!spacePressed){e.preventDefault();spacePressed=true;}});
+    document.addEventListener('keyup',e=>{if(e.code==='Space'){spacePressed=false;if(ballTraceActive)ballTraceActive=null;}});
+  }
   init();
 </script>
 </body>
