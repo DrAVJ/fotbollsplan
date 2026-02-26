@@ -5,1129 +5,1095 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-
     body {
       font-family: system-ui, -apple-system, sans-serif;
       background: #1a1a1a;
       color: #e0e0e0;
-      padding: 14px;
+      padding: 12px;
       touch-action: none;
       user-select: none;
       -webkit-user-select: none;
       -webkit-touch-callout: none;
     }
-
     .container { max-width: 1600px; margin: 0 auto; }
 
-    h1 { font-size: 1.5rem; margin-bottom: 6px; color: #fff; }
-
-    .settings-bar {
-      display: flex; gap: 12px; margin-bottom: 16px;
-      flex-wrap: wrap; padding: 12px;
-      background: #2a2a2a; border-radius: 6px;
-    }
-
-    .top-bar { display: flex; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
-
-    .control-group { display: flex; gap: 6px; align-items: right; }
-
     button {
-      padding: 8px 16px; border: none; border-radius: 6px;
-      font-weight: 600; font-size: 0.9rem; cursor: pointer;
-      transition: all 0.2s; background: #2d5f3f; color: #fff;
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #2d5f3f;
+      color: #fff;
     }
     button:hover { background: #3a7a52; }
-    button.active { background: #ff9500; }
     button.secondary { background: #444; }
     button.secondary:hover { background: #555; }
     button.danger { background: #c0392b; }
     button.danger:hover { background: #e74c3c; }
+    button.icon-btn { padding: 6px 8px; font-size: 1.1rem; }
+    button.export-btn {
+      background: #1a6ea8;
+    }
+    button.export-btn:hover { background: #2080c0; }
+    button.export-btn.recording { background: #c0392b; animation: pulse 1s infinite; }
 
-    label { font-size: 0.9rem; color: #bbb; }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.6} }
 
     input[type="number"] {
-      width: 60px; padding: 6px; border: 1px solid #555;
-      border-radius: 4px; background: #2a2a2a; color: #fff; font-size: 0.9rem;
+      width: 46px;
+      padding: 3px 4px;
+      border: 1px solid #555;
+      border-radius: 4px;
+      background: #2a2a2a;
+      color: #fff;
+      font-size: 0.8rem;
     }
-     
+
+    /* Layout */
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .top-left, .top-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Toolbar */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .toolbar-item {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3px;
+      border-radius: 6px;
+      cursor: grab;
+      transition: all 0.2s;
+      touch-action: none;
+      user-select: none;
+    }
+    .toolbar-item:hover { background: rgba(255,255,255,0.1); transform: scale(1.15); }
+    .toolbar-item:active { cursor: grabbing; opacity: 0.7; }
+    .toolbar-icon { font-size: 1.6rem; }
+    .dragging-icon {
+      position: fixed;
+      pointer-events: none;
+      z-index: 10000;
+      font-size: 1.8rem;
+      opacity: 0.8;
+    }
+
+    /* Transport */
+    .transport {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #222;
+      padding: 5px 6px;
+      border-radius: 6px;
+    }
+    .transport button {
+      padding: 4px 6px;
+      font-size: 0.9rem;
+      min-width: 30px;
+      background: #3a3a3a;
+    }
+    .transport button:hover { background: #555; }
+    .transport .t-play {
+      background: #2d5f3f;
+      min-width: 40px;
+    }
+    .transport .t-play.paused { background: #ff9500; }
+    .scrubber-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: 6px;
+    }
+    .scrubber-wrap input[type="range"] {
+      width: 120px;
+      accent-color: #4caf50;
+      height: 4px;
+      cursor: pointer;
+    }
+    .time-label {
+      font-size: 0.78rem;
+      color: #aaa;
+      min-width: 40px;
+      text-align: right;
+    }
+
+    /* Planlayout */
     .main-layout {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  flex-wrap: nowrap;   /* NY RAD – sidebaren stannar alltid till höger */
-      overflow: visible;
-}
-
-       .pitch-container { flex: 1; min-width: 0; display: flex; justify-content: center; overflow: visible;}
-
-    #pitchWrapper { position: relative; display: inline-flex; overflow: visible; padding-top: 35px;}
-
+      display: flex;
+      justify-content: center;
+      margin-top: 4px;
+    }
+    .pitch-container {
+      position: relative;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #pitchWrapper {
+      position: relative;
+      display: inline-flex;
+      padding-top: 24px;
+    }
     #pitch {
       position: relative;
-      width: 60vw; height: 50vh;
-      background: linear-gradient(180deg, #2d5f3f 0%, #1f4d2f 100%);
-      border: 3px solid #fff; border-radius: 8px;
+      width: 60vw;
+      height: 50vh;
+      background: linear-gradient(180deg,#2d5f3f 0%,#1f4d2f 100%);
+      border: 3px solid #fff;
+      border-radius: 8px;
       overflow: visible;
       touch-action: none;
-      clip-path: inset(-40 -100px -100px -100px);
-      pointer-events: auto; z-index: 1;
+      clip-path: inset(-40px -100px -100px -100px);
+      pointer-events: auto;
+      z-index: 1;
     }
 
     .pitch-line { position: absolute; background: rgba(255,255,255,0.8); }
-    .midline { left: 0; right: 0; top: 50%; height: 2px; transform: translateY(-50%); }
-
+    .midline { left:0;right:0;top:50%;height:2px;transform:translateY(-50%); }
     .center-circle {
-      position: absolute; left: 50%; top: 50%;
-      width: 60px; height: 60px;
-      border: 2px solid rgba(255,255,255,0.8);
-      border-radius: 50%; transform: translate(-50%,-50%);
+      position:absolute;left:50%;top:50%;
+      width:120px;height:120px;
+      border:2px solid rgba(255,255,255,0.8);
+      border-radius:50%;
+      transform:translate(-50%,-50%);
     }
-
     .center-spot {
-      position: absolute; left: 50%; top: 50%;
-      width: 4px; height: 4px;
-      background: rgba(255,255,255,0.8);
-      border-radius: 50%; transform: translate(-50%,-50%);
+      position:absolute;left:50%;top:50%;
+      width:4px;height:4px;
+      background:rgba(255,255,255,0.8);
+      border-radius:50%;
+      transform:translate(-50%,-50%);
     }
-
-    .penalty-box { position: absolute; border: 2px solid rgba(255,255,255,0.8); }
-    .penalty-box-left  { left: 50%; top: 0;    width: 40%; height: 15%; transform: translateX(-50%); }
-    .penalty-box-right { left: 50%; bottom: 0; width: 40%; height: 15%; transform: translateX(-50%); }
-
-    .goal-area { position: absolute; border: 2px solid rgba(255,255,255,0.8); }
-    .goal-area-left  { left: 50%; top: 0;    width: 22%; height: 8%; transform: translateX(-50%); }
-    .goal-area-right { left: 50%; bottom: 0; width: 22%; height: 8%; transform: translateX(-50%); }
+    .penalty-box { position:absolute;border:2px solid rgba(255,255,255,0.8); }
+    .penalty-box-left  { left:50%;top:0;width:40%;height:15%;transform:translateX(-50%); }
+    .penalty-box-right { left:50%;bottom:0;width:40%;height:15%;transform:translateX(-50%); }
+    .goal-area { position:absolute;border:2px solid rgba(255,255,255,0.8); }
+    .goal-area-left  { left:50%;top:0;width:22%;height:8%;transform:translateX(-50%); }
+    .goal-area-right { left:50%;bottom:0;width:22%;height:8%;transform:translateX(-50%); }
 
     .goal {
-      position: absolute; left: 50%;
-      width: 80px; height: 30px;
-      transform: translateX(-50%);
-      box-sizing: border-box;
-      border: 3px solid #fff; border-radius: 3px;
+      position:absolute;left:50%;
+      width:80px;height:22px;
+      transform:translateX(-50%);
+      box-sizing:border-box;
+      border:3px solid #fff;
+      border-radius:3px;
       background:
-        linear-gradient(90deg,  rgba(255,255,255,0.25) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(255,255,255,0.25) 1px, transparent 1px);
-      background-size: 8px 8px;
+        linear-gradient(90deg,rgba(255,255,255,0.25) 1px,transparent 1px),
+        linear-gradient(180deg,rgba(255,255,255,0.25) 1px,transparent 1px);
+      background-size:8px 8px;
     }
-    .goal-left  { top: -30px;    border-bottom: none; }
-    .goal-right { bottom: -30px; border-top: none; }
+    .goal-left  { top:-22px;border-bottom:none; }
+    .goal-right { bottom:-22px;border-top:none; }
 
     .cone {
-      position: absolute;
-      width: 0; height: 0;
-      border-left: 12px solid transparent;
-      border-right: 12px solid transparent;
-      border-bottom: 20px solid #ffd700;
-      cursor: grab; z-index: 10;
-      touch-action: none;
+      position:absolute;
+      width:0;height:0;
+      border-left:12px solid transparent;
+      border-right:12px solid transparent;
+      border-bottom:20px solid #ffd700;
+      cursor:grab;z-index:10;touch-action:none;
     }
-    .cone:active { cursor: grabbing; transform: scale(1.1); }
+    .cone:active { cursor:grabbing;transform:scale(1.1); }
 
     .player {
-      position: absolute; width: 36px; height: 36px;
-      border-radius: 50%; display: flex; align-items: center;
-      justify-content: center; font-weight: 700; font-size: 0.9rem;
-      cursor: grab; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-      border: 2px solid rgba(255,255,255,0.3);
-      transition: transform 0.1s; z-index: 20;
+      position:absolute;
+      width:36px;height:36px;
+      border-radius:50%;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:700;font-size:0.9rem;
+      cursor:grab;
+      box-shadow:0 2px 8px rgba(0,0,0,0.4);
+      border:2px solid rgba(255,255,255,0.3);
+      transition:transform 0.1s;z-index:20;
     }
-    .player:active { cursor: grabbing; transform: scale(1.1); }
-    .player.left  { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: #fff; }
-    .player.right { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: #fff; }
+    .player:active { cursor:grabbing;transform:scale(1.1); }
+    .player.left  { background:linear-gradient(135deg,#3498db 0%,#2980b9 100%);color:#fff; }
+    .player.right { background:linear-gradient(135deg,#e74c3c 0%,#c0392b 100%);color:#fff; }
 
     .ball {
-      position: absolute; width: 20px; height: 20px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 30% 30%, #fff, #f0f0f0, #d0d0d0);
-      box-shadow: 0 2px 6px rgba(0,0,0,0.5), inset -2px -2px 4px rgba(0,0,0,0.2);
-      cursor: grab; border: 1px solid rgba(0,0,0,0.2); z-index: 50;
+      position:absolute;width:20px;height:20px;
+      border-radius:50%;
+      background:radial-gradient(circle at 30% 30%,#fff,#f0f0f0,#d0d0d0);
+      box-shadow:0 2px 6px rgba(0,0,0,0.5),inset -2px -2px 4px rgba(0,0,0,0.2);
+      cursor:grab;border:1px solid rgba(0,0,0,0.2);z-index:50;
     }
-    .ball:active { cursor: grabbing; }
-    .ball.held { pointer-events: none; z-index: 25; }
+    .ball:active { cursor:grabbing; }
+    .ball.held { pointer-events:none;z-index:25; }
 
     .trace {
-      position: absolute; pointer-events: none;
-      stroke-dasharray: 5,5;
-      animation: dash 0.5s linear infinite; z-index: 5;
+      position:absolute;pointer-events:none;
+      stroke-dasharray:5,5;
+      animation:dash 0.5s linear infinite;
+      z-index:5;
     }
-    @keyframes dash { to { stroke-dashoffset: -10; } }
-
-    .sidebar { width: 60px; flex-shrink: 0; display: block; }
-
-    .rec-panel {
-      position: fixed; right: 16px; top: 50%; transform: translateY(-50%);
-      background: #2a2a2a; border: 2px solid #444; border-radius: 8px;
-      padding: 16px; max-width: 350px; max-height: 80vh;
-      overflow-y: auto; z-index: 1000;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: none;
-    }
-    .rec-panel.active { display: block; }
-    .rec-panel h3 {
-      font-size: 1rem; margin-bottom: 12px; color: #fff;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .rec-panel .close-btn {
-      background: #c0392b; border: none; color: #fff;
-      width: 24px; height: 24px; border-radius: 50%;
-      cursor: pointer; font-size: 1rem; line-height: 1;
-      padding: 0; display: flex; align-items: center; justify-content: center;
-    }
-    .rec-panel .close-btn:hover { background: #e74c3c; }
-    .rec-list { max-height: calc(80vh - 80px); overflow-y: auto; }
-
-    .toggle-rec-btn { background: #2d5f3f; padding: 12px 16px; font-size: 1rem; width: 100%; }
-    .toggle-rec-btn:hover { background: #3a7a52; }
-
-    .line-controls {
-      background: #2a2a2a; border: 1px solid #444;
-      border-radius: 6px; padding: 12px; margin-bottom: 12px;
-    }
-    .line-controls h3 { font-size: 0.9rem; margin-bottom: 8px; color: #fff; }
-
-    .line-control-row {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 6px; font-size: 0.85rem;
-    }
-    .line-control-row input[type="checkbox"] { cursor: pointer; }
-    .line-control-row label { flex: 1; cursor: pointer; color: #ccc; }
-    .line-control-row input[type="range"] { width: 80px; }
-
-    .rec-row {
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 8px; padding: 6px;
-      background: #333; border-radius: 4px;
-    }
-    .rec-row span { flex: 1; font-size: 0.85rem; color: #bbb; }
-    .rec-row input { width: 50px; padding: 4px; font-size: 0.85rem; }
-    .rec-row button { padding: 4px 8px; font-size: 0.75rem; }
+    @keyframes dash { to { stroke-dashoffset:-10; } }
 
     .resize-handle {
-  position: absolute;
-  bottom: -10px;      /* sticker lite utanför planens hörn */
-  right: -10px;
-  width: 28px;
-  height: 28px;
-  cursor: nwse-resize;
-  background: rgba(255, 255, 255, 0.4);
-  border-top-left-radius: 6px;
-  border-radius: 50%;           /* gör det till en rund knapp */
-  z-index: 200;
-  touch-action: none;           /* VIKTIGT för mobil */
-  border: 2px solid #fff;
-}
-
-
-    .right-controls { display: flex; flex-direction: column; gap: 12px; }
-
-    .toolbar {
-      display: flex; flex-direction: row; gap: 12px; padding: 12px;
-      background: transparent; border-radius: 6px;
-      justify-content: center; align-items: center;
-      flex-wrap: wrap; margin-bottom: 50px;
-      position: relative; z-index: 2000;
+      position:absolute;
+      bottom:-10px;right:-10px;
+      width:26px;height:26px;
+      cursor:nwse-resize;
+      background:rgba(255,255,255,0.4);
+      border-radius:50%;
+      z-index:200;touch-action:none;
+      border:2px solid #fff;
     }
 
-    .toolbar-item {
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 2px; padding: 4px; background: transparent;
-      border: none; border-radius: 6px; cursor: grab;
-      transition: all 0.2s; touch-action: none; user-select: none;
+    /* Plan-linjekontroller – liten vertikal grupp vid sidan */
+    .side-controls {
+      position: absolute;
+      left: -90px;
+      top: 40px;
+      width: 80px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.75rem;
     }
-    .toolbar-item:hover { background: rgba(255,255,255,0.1); transform: scale(1.2); }
-    .toolbar-item:active { cursor: grabbing; opacity: 0.7; }
-
-    .toolbar-icon { font-size: 1.8rem; user-select: none; }
-
-    .dragging-icon {
-      position: fixed; pointer-events: none;
-      z-index: 10000; font-size: 1.8rem; opacity: 0.8;
+    .side-controls label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: #ccc;
+      cursor: pointer;
+    }
+    .side-controls input[type="checkbox"] {
+      flex-shrink: 0;
+    }
+    .side-controls .reset-btn {
+      margin-top: 4px;
+      padding: 4px 4px;
+      font-size: 0.75rem;
     }
 
-    .toolbar-label { display: none; }
+    /* REC overlay */
+    .rec-overlay {
+      position: absolute;
+      top: 10px;
+      right: -260px;
+      width: 240px;
+      max-height: 80vh;
+      background: rgba(20,20,20,0.9);
+      border-radius: 8px;
+      border: 1px solid #444;
+      padding: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      z-index: 3000;
+    }
+    .rec-overlay.active { display: flex; }
+    .rec-overlay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #fff;
+    }
+    .rec-overlay-header button {
+      background: #555;
+      width: 22px;height: 22px;
+      border-radius: 50%;
+      padding: 0;
+      font-size: 0.9rem;
+    }
+    .rec-overlay-header button:hover { background:#c0392b; }
 
+    .step-info {
+      font-size: 0.75rem;
+      color: #aaa;
+      text-align: left;
+    }
+    .step-info span {
+      color: #fff;
+      font-weight: 700;
+    }
 
+    .rec-list {
+      overflow-y: auto;
+      max-height: 60vh;
+      padding-top: 2px;
+    }
+    .rec-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 5px;
+      padding: 4px 5px;
+      background: #333;
+      border-radius: 4px;
+      transition: background 0.2s, box-shadow 0.2s;
+    }
+    .rec-row.playing {
+      background:#1a4a2e;
+      box-shadow:0 0 0 2px #4caf50;
+    }
+    .rec-row span {
+      flex: 1;
+      font-size: 0.78rem;
+      color: #bbb;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rec-row.playing span {
+      color:#7fff7f;
+      font-weight:700;
+    }
+    .rec-row input {
+      width: 40px;
+      padding: 2px 3px;
+      font-size: 0.75rem;
+    }
+    .rec-row button {
+      padding: 2px 5px;
+      font-size: 0.7rem;
+    }
 
+    /* Export overlay */
+    #exportOverlay {
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,0.75);
+      z-index:9000;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      gap:16px;
+    }
+    #exportOverlay.active { display:flex; }
+    #exportOverlay p { color:#fff;font-size:1.1rem; }
+    #exportProgress {
+      width:300px;height:12px;
+      background:#333;border-radius:6px;overflow:hidden;
+    }
+    #exportProgressBar {
+      height:100%;width:0%;background:#1a6ea8;
+      transition:width 0.2s;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="settings-bar">
-      <button onclick="toggleGoals()">Visa/dölj mål</button>
-      <button onclick="resetPositions()">Återställ positioner</button>
-    </div>
+<div class="container">
 
-    <div class="toolbar">
-      <div class="toolbar-item" data-type="player-left">
-        <div class="toolbar-icon" onpointerdown="startIconDrag(event,'player-left',this)">🔵</div>
-      </div>
-      <div class="toolbar-item" data-type="player-right">
-        <div class="toolbar-icon" onpointerdown="startIconDrag(event,'player-right',this)">🔴</div>
-      </div>
-      <div class="toolbar-item" data-type="cone">
-        <div class="toolbar-icon" onpointerdown="startIconDrag(event,'cone',this)">🔺</div>
-      </div>
-      <div class="toolbar-item" data-type="ball">
-        <div class="toolbar-icon" onpointerdown="startIconDrag(event,'ball',this)">⚽</div>
-      </div>
-      <!-- goal-left (öppning nedåt = mål vid planens topp) -->
-<div class="toolbar-item" data-type="goal-left">
-  <div class="toolbar-icon" onpointerdown="startIconDrag(event,'goal-left',this)">
-    <svg width="28" height="16" viewBox="0 0 28 16">
-      <path d="M1,15 L1,1 L27,1 L27,15"
-            fill="rgba(255,255,255,0.12)" stroke="white"
-            stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      <line x1="8"  y1="1" x2="8"  y2="15" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-      <line x1="14" y1="1" x2="14" y2="15" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-      <line x1="20" y1="1" x2="20" y2="15" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-      <line x1="1"  y1="6" x2="27" y2="6"  stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-      <line x1="1"  y1="11" x2="27" y2="11" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-    </svg>
-  </div>
-</div>
-      <!-- goal-right (öppning uppåt = mål vid planens botten) -->
-<div class="toolbar-item" data-type="goal-right">
-  <div class="toolbar-icon" onpointerdown="startIconDrag(event,'goal-right',this)">
-    <svg width="28" height="16" viewBox="0 0 28 16">
-      <path d="M1,1 L1,15 L27,15 L27,1"
-            fill="rgba(255,255,255,0.12)" stroke="white"
-            stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-      <line x1="8"  y1="1" x2="8"  y2="15" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-      <line x1="14" y1="1" x2="14" y2="15" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-      <line x1="20" y1="1" x2="20" y2="15" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-      <line x1="1"  y1="5" x2="27" y2="5"  stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-      <line x1="1"  y1="10" x2="27" y2="10" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
-    </svg>
-  </div>
-</div>
-
-    <div class="main-layout">
-      <div class="pitch-container">
-        <div id="pitchWrapper">
-          <div id="pitch">
-            <div class="pitch-line midline"  id="midline"></div>
-            <div class="center-circle"       id="centerCircle"></div>
-            <div class="center-spot"         id="centerSpot"></div>
-            <div class="penalty-box penalty-box-left"  id="penaltyLeft"></div>
-            <div class="penalty-box penalty-box-right" id="penaltyRight"></div>
-            <div class="goal-area goal-area-left"  id="goalAreaLeft"></div>
-            <div class="goal-area goal-area-right" id="goalAreaRight"></div>
-            <div class="goal goal-left"  id="goalLeft"></div>
-            <div class="goal goal-right" id="goalRight"></div>
-          </div>
-          <div class="resize-handle" id="resizeHandle"></div>
+  <!-- TOP BAR: ikoner + inspelning -->
+  <div class="top-bar">
+    <div class="top-left">
+      <div class="toolbar">
+        <div class="toolbar-item" data-type="player-left">
+          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'player-left',this)">🔵</div>
         </div>
-      </div>
-
-      <div class="sidebar">
-        <div class="right-controls">
-          <div class="top-bar">
-            <button id="recordBtn" onclick="toggleRecord()">🔴 REC</button>
-            <button onclick="playRecordings()">▶️</button>
-            <button onclick="stopPlayback()">⏹️ </button>
-            <button class="secondary" onclick="restoreFromREC1()">🔁 </button>
-            <button class="danger" onclick="clearRecordings()">🗑️ </button>
+        <div class="toolbar-item" data-type="player-right">
+          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'player-right',this)">🔴</div>
+        </div>
+        <div class="toolbar-item" data-type="cone">
+          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'cone',this)">🔺</div>
+        </div>
+        <div class="toolbar-item" data-type="ball">
+          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'ball',this)">⚽</div>
+        </div>
+        <div class="toolbar-item" data-type="goal-left">
+          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'goal-left',this)">
+            <svg width="36" height="10" viewBox="0 0 36 10">
+              <path d="M1,9 L1,1 L35,1 L35,9" fill="rgba(255,255,255,0.12)" stroke="white" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <line x1="10" y1="1" x2="10" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              <line x1="18" y1="1" x2="18" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              <line x1="26" y1="1" x2="26" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              <line x1="1"  y1="5" x2="35" y2="5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+            </svg>
           </div>
-
-          <button class="toggle-rec-btn" onclick="toggleRecPanel()">📋</button>
-
-          <div class="line-controls">
-            <h3>Planens linjer</h3>
-            <div class="line-control-row">
-              <input type="checkbox" id="showMidline" checked onchange="toggleLine('midline')">
-              <label for="showMidline">Mittlinje</label>
-            </div>
-            <div class="line-control-row">
-              <input type="checkbox" id="showCenterCircle" checked onchange="toggleLine('centerCircle')">
-              <label for="showCenterCircle">Mittenring</label>
-            </div>
-            <div class="line-control-row">
-              <label>Ringstorlek:</label>
-              <input type="range" id="circleSize" min="60" max="200" value="120"
-                     oninput="updateCircleSize(this.value)">
-            </div>
-            <div class="line-control-row">
-              <input type="checkbox" id="showCenterSpot" checked onchange="toggleLine('centerSpot')">
-              <label for="showCenterSpot">Mittenpunkt</label>
-            </div>
-            <div class="line-control-row">
-              <input type="checkbox" id="showPenaltyBoxes" checked onchange="togglePenaltyBoxes()">
-              <label for="showPenaltyBoxes">Straffområden</label>
-            </div>
-            <div class="line-control-row">
-              <input type="checkbox" id="showGoalAreas" checked onchange="toggleGoalAreas()">
-              <label for="showGoalAreas">Målområden</label>
-            </div>
+        </div>
+        <div class="toolbar-item" data-type="goal-right">
+          <div class="toolbar-icon" onpointerdown="startIconDrag(event,'goal-right',this)">
+            <svg width="36" height="10" viewBox="0 0 36 10">
+              <path d="M1,1 L1,9 L35,9 L35,1" fill="rgba(255,255,255,0.12)" stroke="white" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+              <line x1="10" y1="1" x2="10" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              <line x1="18" y1="1" x2="18" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              <line x1="26" y1="1" x2="26" y2="9" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+              <line x1="1"  y1="5" x2="35" y2="5" stroke="rgba(255,255,255,0.4)" stroke-width="1"/>
+            </svg>
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="rec-panel" id="recPanel">
-        <h3>
-          Inspelningar
-          <button class="close-btn" onclick="toggleRecPanel()">×</button>
-        </h3>
-        <div id="recList" class="rec-list"></div>
+    <div class="top-right">
+      <button id="recordBtn" onclick="toggleRecord()">🔴 REC</button>
+
+      <div class="transport">
+        <button class="secondary icon-btn" onclick="stepBack()" title="Föregående steg">⏮</button>
+        <button class="secondary icon-btn" onclick="scrubRelative(-0.5)" title="-0.5s">⏪</button>
+        <button id="panelPlayBtn" class="t-play icon-btn" onclick="togglePlayPause()">▶</button>
+        <button class="secondary icon-btn" onclick="scrubRelative(0.5)" title="+0.5s">⏩</button>
+        <button class="secondary icon-btn" onclick="stepForward()" title="Nästa steg">⏭</button>
+        <button class="secondary icon-btn" onclick="stopAndReset()" title="Stopp">⏹</button>
       </div>
+
+      <div class="scrubber-wrap">
+        <input type="range" id="scrubber" min="0" max="1000" value="0" oninput="onScrubInput(this.value)">
+        <span id="timeLabel" class="time-label">0.0s</span>
+      </div>
+
+      <button class="secondary icon-btn" onclick="toggleRecOverlay()" title="Visa/dölj inspelningar">📋</button>
+      <button id="exportBtn" class="export-btn icon-btn" onclick="toggleExportRecord()" title="Spela in video">🎬</button>
+      <button class="secondary icon-btn" onclick="restoreFromREC1()" title="Återställ startläge">🔁</button>
+      <button class="danger icon-btn" onclick="clearRecordings()" title="Rensa alla inspelningar">🗑️</button>
     </div>
   </div>
 
-  <script>
-    const pitch        = document.getElementById('pitch');
-    const pitchWrapper = document.getElementById('pitchWrapper');
-    const resizeHandle = document.getElementById('resizeHandle');
-    const recList      = document.getElementById('recList');
-    const recordBtn    = document.getElementById('recordBtn');
+  <!-- Plan + overlay -->
+  <div class="main-layout">
+    <div class="pitch-container">
+      <div id="pitchWrapper">
+        <div id="pitch">
+          <div class="pitch-line midline" id="midline"></div>
+          <div class="center-circle" id="centerCircle"></div>
+          <div class="center-spot" id="centerSpot"></div>
+          <div class="penalty-box penalty-box-left" id="penaltyLeft"></div>
+          <div class="penalty-box penalty-box-right" id="penaltyRight"></div>
+          <div class="goal-area goal-area-left" id="goalAreaLeft"></div>
+          <div class="goal-area goal-area-right" id="goalAreaRight"></div>
+          <div class="goal goal-left" id="goalLeft"></div>
+          <div class="goal goal-right" id="goalRight"></div>
+        </div>
+        <div class="resize-handle" id="resizeHandle"></div>
 
-    // FIX 1: Borttagna oanvända variabler (leftCount, rightCount, ballCount)
-    let showGoals = true;
+        <!-- Plan & linjer – liten panel till vänster om planen -->
+        <div class="side-controls">
+          <label><input type="checkbox" id="showGoalsCheck" checked onchange="setGoalVisibility(this.checked)">Mål</label>
+          <label><input type="checkbox" id="showMidline" checked onchange="toggleLine('midline')">Mittlinje</label>
+          <label><input type="checkbox" id="showCenterCircle" checked onchange="toggleLine('centerCircle')">Ring</label>
+          <label><input type="checkbox" id="showCenterSpot" checked onchange="toggleLine('centerSpot')">Punkt</label>
+          <label><input type="checkbox" id="showPenaltyBoxes" checked onchange="togglePenaltyBoxes()">Straff</label>
+          <label><input type="checkbox" id="showGoalAreas" checked onchange="toggleGoalAreas()">Målomr.</label>
+          <button class="reset-btn danger" onclick="resetPositions()">↻ Återställ</button>
+        </div>
 
-    let players = [];
-    let balls   = [];
-    let cones   = [];
-    let traces  = [];
+        <!-- REC overlay vid sidan om planen -->
+        <div class="rec-overlay" id="recOverlay">
+          <div class="rec-overlay-header">
+            <span>Inspelningar</span>
+            <button onclick="toggleRecOverlay()">×</button>
+          </div>
+          <div class="step-info">
+            Steg <span id="stepLabel">–</span> / <span id="stepTotal">–</span>
+          </div>
+          <div id="recList" class="rec-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    let playerCounter = 0;
-    let coneCounter   = 0;
+<!-- Export overlay -->
+<div id="exportOverlay">
+  <p id="exportStatus">Spelar in video...</p>
+  <div id="exportProgress"><div id="exportProgressBar"></div></div>
+  <button onclick="stopExportRecord()" style="background:#c0392b;">⏹ Stoppa & spara WebM</button>
+</div>
 
-    let dragInfo       = null;
-    let spacePressed   = false;
-    let ballTraceActive = null;
+<script>
+  const pitch        = document.getElementById('pitch');
+  const pitchWrapper = document.getElementById('pitchWrapper');
+  const resizeHandle = document.getElementById('resizeHandle');
+  const recList      = document.getElementById('recList');
+  const recordBtn    = document.getElementById('recordBtn');
+  const exportBtn    = document.getElementById('exportBtn');
+  const panelPlayBtn = document.getElementById('panelPlayBtn');
+  const scrubber     = document.getElementById('scrubber');
+  const timeLabel    = document.getElementById('timeLabel');
+  const stepLabel    = document.getElementById('stepLabel');
+  const stepTotal    = document.getElementById('stepTotal');
+  const recOverlay   = document.getElementById('recOverlay');
 
-    let ballOwners = new Map();
+  let showGoals = true;
+  let players=[], balls=[], cones=[], traces=[];
+  let playerCounter=0, coneCounter=0;
+  let dragInfo=null, spacePressed=false, ballTraceActive=null;
+  let ballOwners=new Map();
+  let recordings=[], currentRecording=null, recordMode=false;
 
-    let recordings      = [];
-    let currentRecording = null;
-    let recordMode      = false;
+  let isPlaying=false, isPaused=false, playbackRequestId=null;
+  let playbackStartWall=0, playbackPauseOffset=0, playbackSteps=[], playbackTotalDur=0;
 
-    let isPlaying          = false;
-    let playbackRequestId  = null;
-    let playbackStartWall  = 0;
-    let playbackSteps      = [];
-    let playbackTotalDur   = 0;
+  let resizing=false, resizeStartWidth=0, resizeStartHeight=0, resizeStartX=0, resizeStartY=0;
+  let goals=[], goalCounter=0;
 
-    let resizing         = false;
-    let resizeStartWidth  = 0;
-    let resizeStartHeight = 0;
-    let resizeStartX     = 0;
-    let resizeStartY     = 0;
+  // VIDEO EXPORT
+  let exportCanvas=null, exportCtx=null, exportStream=null;
+  let exportRecorder=null, exportChunks=[], exportActive=false;
+  let exportRAF=null, exportStartTime=0;
 
-    let goals       = [];
-    let goalCounter = 0;
-
-    // ─── INIT ────────────────────────────────────────────────────────────────
-
-    function init() {
-      updatePlayers();
-      setupIconDragDrop();
-      setupResize();
-
-      document.addEventListener('keydown', e => {
-        if (e.code === 'Space' && !spacePressed) {
-          e.preventDefault();
-          spacePressed = true;
-        }
-      });
-
-      document.addEventListener('keyup', e => {
-        if (e.code === 'Space') {
-          spacePressed = false;
-          if (ballTraceActive) ballTraceActive = null;
-        }
-      });
-    }
-
-    // ─── RESIZE ──────────────────────────────────────────────────────────────
-
-    // FIX 2: setupResize lyssnar även på pointercancel
-    function setupResize() {
-      resizeHandle.addEventListener('pointerdown', e => {
-        e.preventDefault();
-        resizing = true;
-        const rect    = pitch.getBoundingClientRect();
-        resizeStartWidth  = rect.width;
-        resizeStartHeight = rect.height;
-        resizeStartX = e.clientX;
-        resizeStartY = e.clientY;
-        resizeHandle.setPointerCapture(e.pointerId);
-
-        window.addEventListener('pointermove',   onResizeMove);
-        window.addEventListener('pointerup',     onResizeUp);
-        window.addEventListener('pointercancel', onResizeUp);   // FIX 2
-      });
-    }
-
-    function onResizeMove(e) {
-      if (!resizing) return;
-      const dx = e.clientX - resizeStartX;
-      const dy = e.clientY - resizeStartY;
-      pitch.style.width  = Math.max(300, resizeStartWidth  + dx) + 'px';
-      pitch.style.height = Math.max(400, resizeStartHeight + dy) + 'px';
-    }
-
-    // FIX 2: pointercancel städas bort
-    function onResizeUp(e) {
-      if (!resizing) return;
-      resizing = false;
-      resizeHandle.releasePointerCapture(e.pointerId);
-      window.removeEventListener('pointermove',   onResizeMove);
-      window.removeEventListener('pointerup',     onResizeUp);
-      window.removeEventListener('pointercancel', onResizeUp);  // FIX 2
-    }
-
-    // ─── SPELARE / BOLLAR / KONER ─────────────────────────────────────────────
-
-    function updatePlayers() {
-      players.forEach(p => p.el.remove());
-      balls.forEach(b => b.el.remove());
-      traces.forEach(t => t.remove());
-      players = [];
-      balls   = [];
-      traces  = [];
-      ballOwners.clear();
-    }
-
-    // ─── TOOLBAR DRAG-AND-DROP ───────────────────────────────────────────────
-
-    let draggingIcon    = null;
-    let currentDragType = null;
-
-    function startIconDrag(e, type, iconElement) {
-  e.preventDefault();
-  e.stopPropagation();
-  currentDragType = type;
-
-  draggingIcon = document.createElement('div');
-  draggingIcon.className = 'dragging-icon';
-
-  if (iconElement.querySelector('svg')) {
-    // SVG-ikon: klona innehållet direkt
-    draggingIcon.innerHTML = iconElement.innerHTML;
-    draggingIcon.style.fontSize = '0';
-  } else {
-    draggingIcon.textContent = iconElement.textContent;
+  // ── TRANSPORT ───────────────────────────────────────────────────────
+  function getCurrentTime() {
+    if (!playbackTotalDur) return 0;
+    if (isPaused) return playbackPauseOffset % playbackTotalDur;
+    return ((performance.now() - playbackStartWall) / 1000 + playbackPauseOffset) % playbackTotalDur;
   }
-
-  draggingIcon.style.left = e.clientX + 'px';
-  draggingIcon.style.top  = e.clientY + 'px';
-  document.body.appendChild(draggingIcon);
-  iconElement.style.opacity = '0.3';
-  window.addEventListener('pointermove', onIconDragMove);
-  window.addEventListener('pointerup',   onIconDragEnd);
-}
-
-
-    function onIconDragMove(e) {
-      if (!draggingIcon) return;
-      e.preventDefault();
-      draggingIcon.style.left = e.clientX + 'px';
-      draggingIcon.style.top  = e.clientY + 'px';
+  function seekTo(t) {
+    t = Math.max(0, Math.min(playbackTotalDur || 0, t));
+    playbackPauseOffset = t;
+    playbackStartWall = performance.now();
+    applyFrameAtTime(t);
+    updateTransportUI(t);
+  }
+  function scrubRelative(delta) { if (playbackTotalDur) seekTo(getCurrentTime() + delta); }
+  function stepForward() {
+    if (!playbackSteps.length) return;
+    const t = getCurrentTime(); let acc = 0;
+    for (const s of playbackSteps) {
+      acc += s.duration;
+      if (acc > t + 0.01) { seekTo(acc - s.duration + 0.001); return; }
     }
-
-    function onIconDragEnd(e) {
-      if (!draggingIcon) return;
-      e.preventDefault();
-
-      const pitchRect = pitch.getBoundingClientRect();
-      const x = e.clientX - pitchRect.left;
-      const y = e.clientY - pitchRect.top;
-
-      if (e.clientX >= pitchRect.left && e.clientX <= pitchRect.right &&
-          e.clientY >= pitchRect.top  && e.clientY <= pitchRect.bottom) {
-
-        if      (currentDragType === 'player-left')  createPlayer(`L${++playerCounter}`, 'left',  x, y, playerCounter);
-        else if (currentDragType === 'player-right') createPlayer(`R${++playerCounter}`, 'right', x, y, playerCounter);
-        else if (currentDragType === 'cone')         createCone(`C${++coneCounter}`, x, y);
-        else if (currentDragType === 'ball')         createBall(`B${balls.length + 1}`, x, y);
-        else if (currentDragType === 'goal-left')    createGoal(`GL${++goalCounter}`, 'left',  x, y);
-        else if (currentDragType === 'goal-right')   createGoal(`GR${++goalCounter}`, 'right', x, y);
-      }
-
-      document.body.removeChild(draggingIcon);
-      draggingIcon    = null;
-      currentDragType = null;
-
-      document.querySelectorAll('.toolbar-icon').forEach(i => i.style.opacity = '1');
-      window.removeEventListener('pointermove', onIconDragMove);
-      window.removeEventListener('pointerup',   onIconDragEnd);
+    seekTo(playbackTotalDur);
+  }
+  function stepBack() {
+    if (!playbackSteps.length) return;
+    const t = getCurrentTime(); let acc = 0, prev = 0;
+    for (const s of playbackSteps) {
+      if (acc + s.duration > t - 0.01) { seekTo(prev); return; }
+      prev = acc; acc += s.duration;
     }
-
-    function setupIconDragDrop() { /* allt sköts via startIconDrag */ }
-
-    // ─── SKAPA OBJEKT ────────────────────────────────────────────────────────
-
-    function createPlayer(id, side, x, y, num) {
-      const el = document.createElement('div');
-      el.className = `player ${side}`;
-      el.id = id;
-      el.textContent = num;
-      el.style.left = (x - 18) + 'px';
-      el.style.top  = (y - 18) + 'px';
-      pitch.appendChild(el);
-
-      const player = { id, side, x, y, num, el, clickCount: 0, clickTimer: null };
-      players.push(player);
-      el.addEventListener('pointerdown', e => onPointerDown(e, player, 'player'));
-      el.addEventListener('click',       e => handleObjectClick(e, player, 'player'));
-    }
-
-    function createBall(id, x, y) {
-      const el = document.createElement('div');
-      el.className = 'ball';
-      el.id = id;
-      el.style.left = (x - 10) + 'px';
-      el.style.top  = (y - 10) + 'px';
-      pitch.appendChild(el);
-
-      const ball = { id, x, y, el, clickCount: 0, clickTimer: null };
-      balls.push(ball);
-      el.addEventListener('pointerdown', e => onPointerDown(e, ball, 'ball'));
-      el.addEventListener('click',       e => handleObjectClick(e, ball, 'ball'));
-    }
-
-    function createCone(id, x, y) {
-      const el = document.createElement('div');
-      el.className = 'cone';
-      el.id = id;
-      el.style.left = (x - 12) + 'px';
-      el.style.top  = (y - 10) + 'px';
-      pitch.appendChild(el);
-
-      const cone = { id, x, y, el, clickCount: 0, clickTimer: null };
-      cones.push(cone);
-      el.addEventListener('pointerdown', e => onPointerDown(e, cone, 'cone'));
-      el.addEventListener('click',       e => handleObjectClick(e, cone, 'cone'));
-    }
-
-    function createGoal(id, side, x, y) {
-      const el = document.createElement('div');
-      el.className = 'goal';
-      el.id = id;
-      el.style.position = 'absolute';
-      el.style.width    = '60px';
-      el.style.height   = '20px';
-      el.style.border   = '3px solid rgba(255,255,255,0.9)';
-      el.style.background = 'rgba(255,255,255,0.15)';
-      el.style.cursor   = 'grab';
-      el.style.zIndex   = '100';
-      el.style.left     = (x - 30) + 'px';
-      el.style.top      = (y - 10) + 'px';
-      pitch.appendChild(el);
-
-      const goal = { id, side, x, y, el, rotation: 0, clickCount: 0, clickTimer: null };
-      goals.push(goal);
-      el.addEventListener('pointerdown', e => onPointerDown(e, goal, 'goal'));
-      el.addEventListener('click',       e => handleObjectClick(e, goal, 'goal'));
-    }
-
-    // ─── BOLL-INTERAKTION ────────────────────────────────────────────────────
-
-    function checkBallOverlap(player) {
-      const px = player.x;
-      const py = player.y;
-
-      for (const ball of balls) {
-        const ownerData = ballOwners.get(ball.id);
-        if (ownerData && ownerData.playerId === player.id) continue;
-
-        const dx   = ball.x - px;
-        const dy   = ball.y - py;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist < 18 + 10) {
-          const newOwnerData = { playerId: player.id, lastX: px, lastY: py };
-          ballOwners.set(ball.id, newOwnerData);
-          ball.el.classList.add('held');
-
-          if (recordMode && currentRecording && currentRecording.actorId === player.id) {
-            const hadNoBall = currentRecording.heldBalls.length === 0;
-            if (hadNoBall) {
-              recordings.push(currentRecording);
-              const pitchRect = pitch.getBoundingClientRect();
-              const now = performance.now();
-              currentRecording = {
-                id: `REC${recordings.length + 1}`,
-                actorId:   player.id,
-                step:      recordings.length + 1,
-                startTime: now,
-                frames:    [],
-                heldBalls: [ball.id],
-                startPos:  { xRel: player.x / pitchRect.width, yRel: player.y / pitchRect.height }
-              };
-              currentRecording.frames.push({ t: 0, xRel: currentRecording.startPos.xRel, yRel: currentRecording.startPos.yRel });
-            } else if (!currentRecording.heldBalls.includes(ball.id)) {
-              currentRecording.heldBalls.push(ball.id);
-            }
-          }
-        }
-      }
-    }
-
-    function releaseBall(playerId) {
-      for (const [ballId, ownerData] of ballOwners.entries()) {
-        if (ownerData.playerId === playerId) {
-          ballOwners.delete(ballId);
-          const ball = balls.find(b => b.id === ballId);
-          if (ball) ball.el.classList.remove('held');
-        }
-      }
-    }
-
-    // FIX: checkBallInGoal – definierades aldrig i originalet
-    function checkBallInGoal(ball) {
-      const pitchRect = pitch.getBoundingClientRect();
-      const bx = ball.x;
-      const by = ball.y;
-
-      for (const id of ['goalLeft', 'goalRight']) {
-        const el = document.getElementById(id);
-        if (!el || !showGoals) continue;
-        const gr = el.getBoundingClientRect();
-        const gx = gr.left - pitchRect.left + gr.width  / 2;
-        const gy = gr.top  - pitchRect.top  + gr.height / 2;
-        if (Math.abs(bx - gx) < gr.width / 2 && Math.abs(by - gy) < gr.height / 2) {
-          el.style.boxShadow = '0 0 14px 5px #ffeb3b';
-          setTimeout(() => el.style.boxShadow = '', 700);
-        }
-      }
-
-      for (const goal of goals) {
-        const gr = goal.el.getBoundingClientRect();
-        const gx = gr.left - pitchRect.left + gr.width  / 2;
-        const gy = gr.top  - pitchRect.top  + gr.height / 2;
-        if (Math.abs(bx - gx) < gr.width / 2 + 5 && Math.abs(by - gy) < gr.height / 2 + 5) {
-          goal.el.style.boxShadow = '0 0 14px 5px #ffeb3b';
-          setTimeout(() => goal.el.style.boxShadow = '', 700);
-        }
-      }
-    }
-
-    // ─── POINTER EVENTS ──────────────────────────────────────────────────────
-
-    function onPointerDown(e, obj, type) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const el        = obj.el;
-      const rect      = el.getBoundingClientRect();
-      const pitchRect = pitch.getBoundingClientRect();
-      const radius    = type === 'ball' ? 10 : type === 'cone' ? 12 : type === 'goal' ? 30 : 18;
-
-      el.setPointerCapture(e.pointerId);
-
-      dragInfo = {
-        obj, type, el,
-        offsetX: e.clientX - rect.left - radius,
-        offsetY: e.clientY - rect.top  - radius,
-        pitchRect
-      };
-
-      if (recordMode) {
-        const pr = pitch.getBoundingClientRect();
-        currentRecording = {
-          id:        `REC${recordings.length + 1}`,
-          actorId:   obj.id,
-          step:      recordings.length + 1,
-          startTime: performance.now(),
-          frames:    [],
-          heldBalls: [],
-          startPos:  { xRel: obj.x / pr.width, yRel: obj.y / pr.height }
-        };
-        currentRecording.frames.push({ t: 0, xRel: currentRecording.startPos.xRel, yRel: currentRecording.startPos.yRel });
-      }
-
-      window.addEventListener('pointermove', onPointerMove);
-      window.addEventListener('pointerup',   onPointerUp);
-    }
-
-    function onPointerMove(e) {
-      if (!dragInfo) return;
-
-      const { obj, type, el, offsetX, offsetY, pitchRect } = dragInfo;
-      const radius = type === 'ball' ? 10 : type === 'cone' ? 8 : type === 'goal' ? 30 : 18;
-
-      let x = e.clientX - pitchRect.left - offsetX;
-      let y = e.clientY - pitchRect.top  - offsetY;
-
-      if (type !== 'ball') {
-        x = Math.max(radius, Math.min(pitchRect.width  - radius, x));
-        y = Math.max(radius, Math.min(pitchRect.height - radius, y));
-      } else {
-        x = Math.max(radius - 100, Math.min(pitchRect.width  - radius + 100, x));
-        y = Math.max(radius - 100, Math.min(pitchRect.height - radius + 100, y));
-      }
-
-      el.style.left = (x - radius) + 'px';
-      el.style.top  = (y - radius) + 'px';
-      obj.x = x;
-      obj.y = y;
-
-      if (type === 'ball') checkBallInGoal(obj);
-
-      if (type === 'player') {
-        checkBallOverlap(obj);
-        for (const ball of balls) {
-          const ownerData = ballOwners.get(ball.id);
-          if (ownerData && ownerData.playerId === obj.id) {
-            const dx    = x - ownerData.lastX;
-            const dy    = y - ownerData.lastY;
-            const angle = Math.atan2(dy, dx);
-            ball.x = x + Math.cos(angle) * 25;
-            ball.y = y + Math.sin(angle) * 25;
-            ball.el.style.left = (ball.x - 10) + 'px';
-            ball.el.style.top  = (ball.y - 10) + 'px';
-            ownerData.lastX = x;
-            ownerData.lastY = y;
-          }
-        }
-      }
-
-      if (currentRecording && currentRecording.actorId === obj.id) {
-        const t = (performance.now() - currentRecording.startTime) / 1000;
-        currentRecording.frames.push({ t, xRel: x / pitchRect.width, yRel: y / pitchRect.height });
-      }
-
-      if (type === 'ball' && spacePressed) {
-        if (!ballTraceActive || ballTraceActive.ball !== obj) {
-          ballTraceActive = { ball: obj, points: [] };
-        }
-        ballTraceActive.points.push({ x, y });
-        drawTrace(ballTraceActive);
-      }
-    }
-
-    function onPointerUp(e) {
-      if (!dragInfo) return;
-
-      const { el, obj, type } = dragInfo;
-      el.releasePointerCapture(e.pointerId);
-
-      if (type === 'player') releaseBall(obj.id);
-
-      if (currentRecording && currentRecording.actorId === obj.id) {
-        recordings.push(currentRecording);
-        currentRecording = null;
-        renderRecList();
-      }
-
-      dragInfo = null;
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup',   onPointerUp);
-    }
-
-    // ─── SPÅRNING ────────────────────────────────────────────────────────────
-
-    function drawTrace(traceData) {
-      const points = traceData.points;
-      if (points.length < 2) return;
-
-      let svg = traces.find(t => t.dataset.ball === traceData.ball.id);
-      if (!svg) {
-        svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.classList.add('trace');
-        svg.dataset.ball = traceData.ball.id;
-        svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';
-        pitch.appendChild(svg);
-        traces.push(svg);
-      }
-
-      svg.innerHTML = '';
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      let d = `M ${points[0].x} ${points[0].y}`;
-      for (let i = 1; i < points.length; i++) d += ` L ${points[i].x} ${points[i].y}`;
-      path.setAttribute('d', d);
-      path.setAttribute('stroke', '#ffeb3b');
-      path.setAttribute('stroke-width', '3');
-      path.setAttribute('fill', 'none');
-      svg.appendChild(path);
-    }
-
-    // ─── LINJER & PLAN ───────────────────────────────────────────────────────
-
-    function toggleGoals() {
-      showGoals = !showGoals;
-      pitch.querySelectorAll('.goal').forEach(g => g.style.display = showGoals ? 'block' : 'none');
-    }
-
-    function resetPositions() {
-      updatePlayers();
-      cones.forEach(c => c.el.remove());
-      cones = [];
-      coneCounter = 0;
-      goals.forEach(g => g.el.remove());
-      goals = [];
-      goalCounter = 0;
-      traces.forEach(t => t.remove());
-      traces = [];
-      ballTraceActive = null;
-      ballOwners.clear();
-    }
-
-    function toggleLine(id) {
-      const el = document.getElementById(id);
-      const cb = document.getElementById(`show${id.charAt(0).toUpperCase() + id.slice(1)}`);
-      if (el) el.style.display = cb.checked ? 'block' : 'none';
-    }
-
-    function togglePenaltyBoxes() {
-      const show = document.getElementById('showPenaltyBoxes').checked;
-      document.getElementById('penaltyLeft').style.display  = show ? 'block' : 'none';
-      document.getElementById('penaltyRight').style.display = show ? 'block' : 'none';
-    }
-
-    function toggleGoalAreas() {
-      const show = document.getElementById('showGoalAreas').checked;
-      document.getElementById('goalAreaLeft').style.display  = show ? 'block' : 'none';
-      document.getElementById('goalAreaRight').style.display = show ? 'block' : 'none';
-    }
-
-    function updateCircleSize(size) {
-      const circle = document.getElementById('centerCircle');
-      if (circle) { circle.style.width = size + 'px'; circle.style.height = size + 'px'; }
-    }
-
-    // ─── INSPELNING ──────────────────────────────────────────────────────────
-
-    function toggleRecord() {
-      recordMode = !recordMode;
-      recordBtn.classList.toggle('active', recordMode);
-      recordBtn.textContent = recordMode ? '🔴 Spelar in...' : '🔴 Spela in';
-
-      if (recordMode) {
-        const pitchRect = pitch.getBoundingClientRect();
-        if (!recordings.find(r => r.id === 'REC1')) {
-          const rec1 = { id: 'REC1', actorId: 'ALL', step: 1, frames: [], snapshot: [] };
-          [...players, ...balls, ...cones, ...goals].forEach(obj => {
-            rec1.snapshot.push({ id: obj.id, xRel: obj.x / pitchRect.width, yRel: obj.y / pitchRect.height });
-          });
-          recordings.unshift(rec1);
-          renderRecList();
-        }
-      } else if (currentRecording) {
-        recordings.push(currentRecording);
-        currentRecording = null;
-        renderRecList();
-      }
-    }
-
-    function renderRecList() {
-      recList.innerHTML = '';
-      if (!recordings.length) {
-        recList.innerHTML = '<p style="color:#777;font-size:0.85rem;">Inga inspelningar än</p>';
-        return;
-      }
-      recordings.forEach((rec, index) => {
-        const row   = document.createElement('div');
-        row.className = 'rec-row';
-
-        const label = document.createElement('span');
-        label.textContent = `${rec.id} (${rec.actorId})`;
-
-        const input = document.createElement('input');
-        input.type  = 'number';
-        input.min   = '1';
-        input.value = rec.step;
-        input.addEventListener('change', () => {
-          const v = parseInt(input.value, 10);
-          rec.step = isNaN(v) || v < 1 ? 1 : v;
-          input.value = rec.step;
-        });
-
-        const delBtn = document.createElement('button');
-        delBtn.textContent = '×';
-        delBtn.className = 'danger';
-        delBtn.addEventListener('click', () => { recordings.splice(index, 1); renderRecList(); });
-
-        row.appendChild(label);
-        row.appendChild(input);
-        row.appendChild(delBtn);
-        recList.appendChild(row);
-      });
-    }
-
-    // ─── UPPSPELNING ─────────────────────────────────────────────────────────
-
-    function playRecordings() {
-      if (!recordings.length) return;
-
-      const byStep = new Map();
-      for (const rec of recordings) {
-        if (!byStep.has(rec.step)) byStep.set(rec.step, []);
-        byStep.get(rec.step).push(rec);
-      }
-
-      playbackSteps = [];
-      for (const step of Array.from(byStep.keys()).sort((a,b) => a-b)) {
-        const recs   = byStep.get(step);
-        let maxDur   = 0;
-        for (const rec of recs) {
-          if (rec.frames.length < 2) continue;
-          maxDur = Math.max(maxDur, rec.frames.at(-1).t - rec.frames[0].t);
-        }
-        playbackSteps.push({ step, recs, duration: maxDur });
-      }
-
-      if (!playbackSteps.length) return;
-      playbackTotalDur   = playbackSteps.reduce((s, p) => s + p.duration, 0);
-      isPlaying          = true;
-      playbackStartWall  = performance.now();
+    seekTo(0);
+  }
+  function togglePlayPause() {
+    if (!playbackSteps.length) { buildPlaybackSteps(); if (!playbackSteps.length) return; }
+    if (isPlaying && !isPaused) {
+      playbackPauseOffset = getCurrentTime(); isPaused = true; isPlaying = false;
+      if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
+      panelPlayBtn.textContent = '▶'; panelPlayBtn.classList.add('paused');
+    } else {
+      playbackStartWall = performance.now(); isPaused = false; isPlaying = true;
+      panelPlayBtn.textContent = '⏸'; panelPlayBtn.classList.remove('paused');
       playbackLoop();
     }
-
-    function playbackLoop() {
-      if (!isPlaying || !playbackSteps.length) return;
-
-      const tGlobal  = (performance.now() - playbackStartWall) / 1000;
-      const tWrapped = playbackTotalDur > 0 ? tGlobal % playbackTotalDur : 0;
-      const pitchRect = pitch.getBoundingClientRect();
-
-      let acc     = 0;
-      let current = playbackSteps[0];
-      for (const s of playbackSteps) {
-        if (tWrapped >= acc && tWrapped < acc + s.duration) { current = s; break; }
-        acc += s.duration;
+  }
+  function stopAndReset() {
+    isPlaying = false; isPaused = false;
+    playbackPauseOffset = 0; playbackStartWall = performance.now();
+    if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
+    panelPlayBtn.textContent = '▶'; panelPlayBtn.classList.remove('paused');
+    if (playbackSteps.length) applyFrameAtTime(0);
+    updateTransportUI(0);
+    document.querySelectorAll('.rec-row').forEach(r => r.classList.remove('playing'));
+  }
+  function buildPlaybackSteps() {
+    if (!recordings.length) return;
+    const byStep = new Map();
+    for (const rec of recordings) {
+      if (!byStep.has(rec.step)) byStep.set(rec.step,[]);
+      byStep.get(rec.step).push(rec);
+    }
+    playbackSteps = [];
+    for (const step of Array.from(byStep.keys()).sort((a,b)=>a-b)) {
+      const recs = byStep.get(step); let maxDur = 0;
+      for (const rec of recs) {
+        if (rec.frames.length < 2) continue;
+        maxDur = Math.max(maxDur, rec.frames.at(-1).t - rec.frames[0].t);
       }
-
-      const localT = tWrapped - acc;
-
-      for (const rec of current.recs) {
-        const frames = rec.frames;
-        if (!frames || frames.length < 2) continue;
-
-        const t0      = frames[0].t;
-        const tEnd    = frames.at(-1).t;
-        const stepDur = tEnd - t0 || 0.001;
-        const t       = t0 + Math.min(localT, stepDur);
-
-        let i = 0;
-        while (i < frames.length - 1 && frames[i+1].t < t) i++;
-        const fA   = frames[i];
-        const fB   = frames[Math.min(i+1, frames.length-1)];
-        const span = (fB.t - fA.t) || 1e-6;
-        const u    = Math.max(0, Math.min(1, (t - fA.t) / span));
-
-        const x = (fA.xRel + (fB.xRel - fA.xRel) * u) * pitchRect.width;
-        const y = (fA.yRel + (fB.yRel - fA.yRel) * u) * pitchRect.height;
-
-        const obj = [...players, ...balls, ...cones, ...goals].find(o => o.id === rec.actorId);
-        if (obj) {
-          const radius = obj.el.classList.contains('ball') ? 10
-                       : obj.el.classList.contains('cone') ? 8
-                       : obj.el.classList.contains('goal') ? 30 : 18;
-          obj.el.style.left = (x - radius) + 'px';
-          obj.el.style.top  = (y - radius) + 'px';
-          obj.x = x; obj.y = y;
-
-          if (rec.heldBalls && rec.heldBalls.length) {
-            const prevX = i > 0 ? frames[i-1].xRel * pitchRect.width  : x;
-            const prevY = i > 0 ? frames[i-1].yRel * pitchRect.height : y;
-            const angle = Math.atan2(y - prevY, x - prevX);
-            for (const ballId of rec.heldBalls) {
-              const ball = balls.find(b => b.id === ballId);
-              if (ball) {
-                ball.x = x + Math.cos(angle) * 25;
-                ball.y = y + Math.sin(angle) * 25;
-                ball.el.style.left = (ball.x - 10) + 'px';
-                ball.el.style.top  = (ball.y - 10) + 'px';
-              }
+      playbackSteps.push({ step, recs, duration: maxDur });
+    }
+    playbackTotalDur = playbackSteps.reduce((s,p) => s + p.duration, 0);
+    stepTotal.textContent = playbackSteps.length;
+  }
+  function applyFrameAtTime(tWrapped) {
+    if (!playbackSteps.length) return;
+    const pr = pitch.getBoundingClientRect();
+    let acc = 0, current = playbackSteps[0], stepIdx = 0;
+    for (let i = 0; i < playbackSteps.length; i++) {
+      const s = playbackSteps[i];
+      if (tWrapped >= acc && tWrapped < acc + s.duration) { current = s; stepIdx = i; break; }
+      acc += s.duration;
+    }
+    const localT = tWrapped - acc;
+    const activeIds = new Set();
+    for (const rec of current.recs) {
+      if (!rec.frames || rec.frames.length < 2) continue;
+      activeIds.add(rec.id);
+      const t0 = rec.frames[0].t, tEnd = rec.frames.at(-1).t;
+      const t = t0 + Math.min(localT, (tEnd - t0) || 0.001);
+      let i = 0; while (i < rec.frames.length - 1 && rec.frames[i+1].t < t) i++;
+      const fA = rec.frames[i], fB = rec.frames[Math.min(i+1, rec.frames.length-1)];
+      const u = Math.max(0, Math.min(1, (t - fA.t) / ((fB.t - fA.t) || 1e-6)));
+      const x = (fA.xRel + (fB.xRel - fA.xRel) * u) * pr.width;
+      const y = (fA.yRel + (fB.yRel - fA.yRel) * u) * pr.height;
+      const obj = [...players,...balls,...cones,...goals].find(o => o.id === rec.actorId);
+      if (obj) {
+        const r = obj.el.classList.contains('ball')?10:obj.el.classList.contains('cone')?8:obj.el.classList.contains('goal')?40:18;
+        obj.el.style.left = (x-r)+'px'; obj.el.style.top = (y-r)+'px'; obj.x=x; obj.y=y;
+        if (rec.heldBalls && rec.heldBalls.length) {
+          const px = i>0?rec.frames[i-1].xRel*pr.width:x, py = i>0?rec.frames[i-1].yRel*pr.height:y;
+          const angle = Math.atan2(y-py, x-px);
+          for (const bid of rec.heldBalls) {
+            const ball = balls.find(b=>b.id===bid);
+            if (ball) {
+              ball.x = x+Math.cos(angle)*25;
+              ball.y = y+Math.sin(angle)*25;
+              ball.el.style.left = (ball.x-10)+'px';
+              ball.el.style.top  = (ball.y-10)+'px';
             }
           }
         }
       }
-
-      playbackRequestId = requestAnimationFrame(playbackLoop);
     }
-
-    function stopPlayback() {
-      isPlaying = false;
+    document.querySelectorAll('.rec-row').forEach(row => row.classList.toggle('playing', activeIds.has(row.dataset.recId)));
+    stepLabel.textContent = stepIdx + 1;
+  }
+  function updateTransportUI(t) {
+    timeLabel.textContent = t.toFixed(1)+'s';
+    if (playbackTotalDur > 0) scrubber.value = Math.round((t / playbackTotalDur) * 1000);
+  }
+  function onScrubInput(val) {
+    if (!playbackTotalDur) return;
+    if (isPlaying && !isPaused) {
+      isPaused = true; isPlaying = false;
       if (playbackRequestId) cancelAnimationFrame(playbackRequestId);
+      panelPlayBtn.textContent = '▶'; panelPlayBtn.classList.add('paused');
     }
+    const t = (val / 1000) * playbackTotalDur;
+    playbackPauseOffset = t; applyFrameAtTime(t); updateTransportUI(t);
+  }
 
-    // FIX 3: restoreFromREC1 med guard för saknad snapshot
-    function restoreFromREC1() {
-      const rec1 = recordings.find(r => r.id === 'REC1');
-      if (!rec1) {
-        alert('Ingen startsnapshot hittad — starta en inspelning först.');
-        return;
-      }
-      if (!rec1.snapshot || rec1.snapshot.length === 0) {
-        alert('REC1 saknar snapshot-data.');
-        return;
-      }
-
-      const pitchRect = pitch.getBoundingClientRect();
-      rec1.snapshot.forEach(snap => {
-        const obj = [...players, ...balls, ...cones, ...goals].find(o => o.id === snap.id);
-        if (!obj) return;
-
-        const x      = snap.xRel * pitchRect.width;
-        const y      = snap.yRel * pitchRect.height;
-        const radius = obj.el.classList.contains('ball') ? 10
-                     : obj.el.classList.contains('cone') ? 8
-                     : obj.el.classList.contains('goal') ? 30 : 18;
-        obj.x = x; obj.y = y;
-        obj.el.style.left = (x - radius) + 'px';
-        obj.el.style.top  = (y - radius) + 'px';
-      });
-
-      ballOwners.clear();
-      balls.forEach(b => b.el.classList.remove('held'));
+  // ── REC OVERLAY ─────────────────────────────────────────────────────
+  function toggleRecOverlay() {
+    recOverlay.classList.toggle('active');
+    if (recOverlay.classList.contains('active')) {
+      buildPlaybackSteps();
+      renderRecList();
     }
+  }
 
-    function toggleRecPanel() {
-      document.getElementById('recPanel').classList.toggle('active');
+  // ── VIDEO EXPORT ────────────────────────────────────────────────────
+  function toggleExportRecord(){ if (!exportActive) startExportRecord(); else stopExportRecord(); }
+  function startExportRecord(){
+    if (!recordings.length) { alert('Spela in rörelser först.'); return; }
+    const pr = pitch.getBoundingClientRect();
+    exportCanvas = document.createElement('canvas');
+    exportCanvas.width = Math.round(pr.width); exportCanvas.height = Math.round(pr.height);
+    exportCtx = exportCanvas.getContext('2d');
+    const mime = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')?'video/webm;codecs=vp9':MediaRecorder.isTypeSupported('video/webm;codecs=vp8')?'video/webm;codecs=vp8':'video/webm';
+    exportStream = exportCanvas.captureStream(30);
+    exportRecorder = new MediaRecorder(exportStream, {mimeType:mime, videoBitsPerSecond:4000000});
+    exportChunks = [];
+    exportRecorder.ondataavailable = e => { if (e.data.size > 0) exportChunks.push(e.data); };
+    exportRecorder.onstop = finalizeExport; exportRecorder.start(100);
+    exportActive = true; exportStartTime = performance.now();
+    exportBtn.textContent = 'Stoppa'; exportBtn.classList.add('recording');
+    document.getElementById('exportOverlay').classList.add('active');
+    buildPlaybackSteps();
+    isPlaying=true; isPaused=false; playbackPauseOffset=0; playbackStartWall=performance.now(); playbackLoop();
+    exportDrawLoop();
+  }
+  function exportDrawLoop(){
+    if (!exportActive) return;
+    const pr=pitch.getBoundingClientRect(), cw=exportCanvas.width, ch=exportCanvas.height, ctx=exportCtx;
+    const grad=ctx.createLinearGradient(0,0,0,ch); grad.addColorStop(0,'#2d5f3f'); grad.addColorStop(1,'#1f4d2f');
+    ctx.fillStyle=grad; ctx.fillRect(0,0,cw,ch);
+    ctx.strokeStyle='rgba(255,255,255,0.9)'; ctx.lineWidth=3; ctx.strokeRect(1.5,1.5,cw-3,ch-3);
+    const lc='rgba(255,255,255,0.8)';
+    if(document.getElementById('showMidline').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,ch/2);ctx.lineTo(cw,ch/2);ctx.stroke();}
+    if(document.getElementById('showCenterCircle').checked){const r=parseInt(document.getElementById('circleSize')?.value||120)/2;ctx.strokeStyle=lc;ctx.lineWidth=2;ctx.beginPath();ctx.arc(cw/2,ch/2,r,0,Math.PI*2);ctx.stroke();}
+    if(document.getElementById('showCenterSpot').checked){ctx.fillStyle=lc;ctx.beginPath();ctx.arc(cw/2,ch/2,3,0,Math.PI*2);ctx.fill();}
+    if(document.getElementById('showPenaltyBoxes').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;const pw=cw*0.4,ph=ch*0.15;ctx.strokeRect((cw-pw)/2,0,pw,ph);ctx.strokeRect((cw-pw)/2,ch-ph,pw,ph);}
+    if(document.getElementById('showGoalAreas').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;const gaw=cw*0.22,gah=ch*0.08;ctx.strokeRect((cw-gaw)/2,0,gaw,gah);ctx.strokeRect((cw-gaw)/2,ch-gah,gaw,gah);}
+    if(showGoals){drawFixedGoal(ctx,cw,ch,'top');drawFixedGoal(ctx,cw,ch,'bottom');}
+    for(const goal of goals){const gr=goal.el.getBoundingClientRect(),gx=gr.left-pr.left,gy=gr.top-pr.top;ctx.save();ctx.translate(gx+gr.width/2,gy+gr.height/2);ctx.rotate(goal.rotation*Math.PI/180);ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=3;ctx.fillStyle='rgba(255,255,255,0.15)';ctx.strokeRect(-gr.width/2,-gr.height/2,gr.width,gr.height);ctx.fillRect(-gr.width/2,-gr.height/2,gr.width,gr.height);ctx.restore();}
+    ctx.setLineDash([5,5]);
+    for(const svg of traces){const path=svg.querySelector('path');if(!path)continue;const pts=parseSvgPath(path.getAttribute('d'));if(pts.length<2)continue;ctx.strokeStyle='#ffeb3b';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);ctx.stroke();}
+    ctx.setLineDash([]);
+    for(const cone of cones){ctx.beginPath();ctx.moveTo(cone.x,cone.y-10);ctx.lineTo(cone.x-12,cone.y+10);ctx.lineTo(cone.x+12,cone.y+10);ctx.closePath();ctx.fillStyle='#ffd700';ctx.fill();}
+    for(const ball of balls){const rg=ctx.createRadialGradient(ball.x-3,ball.y-3,1,ball.x,ball.y,10);rg.addColorStop(0,'#fff');rg.addColorStop(0.5,'#f0f0f0');rg.addColorStop(1,'#d0d0d0');ctx.beginPath();ctx.arc(ball.x,ball.y,10,0,Math.PI*2);ctx.fillStyle=rg;ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    for(const p of players){const isLeft=p.side==='left';const rg=ctx.createLinearGradient(p.x-18,p.y-18,p.x+18,p.y+18);if(isLeft){rg.addColorStop(0,'#3498db');rg.addColorStop(1,'#2980b9');}else{rg.addColorStop(0,'#e74c3c');rg.addColorStop(1,'#c0392b');}ctx.beginPath();ctx.arc(p.x,p.y,18,0,Math.PI*2);ctx.fillStyle=rg;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(p.num),p.x,p.y);}
+    const elapsed=((performance.now()-exportStartTime)/1000).toFixed(1);
+    const pct=Math.min(100,playbackTotalDur>0?(performance.now()-playbackStartWall)/1000/playbackTotalDur*100:0);
+    document.getElementById('exportProgressBar').style.width=pct+'%';
+    document.getElementById('exportStatus').textContent='Spelar in... '+elapsed+'s';
+    exportRAF=requestAnimationFrame(exportDrawLoop);
+  }
+  function drawFixedGoal(ctx,cw,ch,pos){const gw=80,gh=18,gx=(cw-gw)/2,gy=pos==='top'?-gh:ch;ctx.fillStyle='rgba(255,255,255,0.1)';ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.fillRect(gx,gy,gw,gh);ctx.strokeRect(gx,gy,gw,gh);ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;for(let x=gx+8;x<gx+gw;x+=8){ctx.beginPath();ctx.moveTo(x,gy);ctx.lineTo(x,gy+gh);ctx.stroke();}for(let y=gy+6;y<gy+gh;y+=6){ctx.beginPath();ctx.moveTo(gx,y);ctx.lineTo(gx+gw,y);ctx.stroke();}}
+  function parseSvgPath(d){const pts=[],re=/[ML]\s*([\d.]+)[,\s]+([\d.]+)/g;let m;while((m=re.exec(d))!==null)pts.push({x:parseFloat(m[1]),y:parseFloat(m[2])});return pts;}
+  function stopExportRecord(){exportActive=false;if(exportRAF)cancelAnimationFrame(exportRAF);stopPlayback();if(exportRecorder&&exportRecorder.state!=='inactive')exportRecorder.stop();exportBtn.textContent='🎬';exportBtn.classList.remove('recording');document.getElementById('exportOverlay').classList.remove('active');}
+  function finalizeExport(){const blob=new Blob(exportChunks,{type:'video/webm'}),url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='taktik_'+Date.now()+'.webm';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
+
+  // INIT
+  function init(){
+    updatePlayers(); setupIconDragDrop(); setupResize();
+    document.addEventListener('keydown',e=>{if(e.code==='Space'&&!spacePressed){e.preventDefault();spacePressed=true;}});
+    document.addEventListener('keyup',e=>{if(e.code==='Space'){spacePressed=false;if(ballTraceActive)ballTraceActive=null;}});
+  }
+  function setupResize(){
+    resizeHandle.addEventListener('pointerdown',e=>{
+      e.preventDefault();resizing=true;
+      const rect=pitch.getBoundingClientRect();
+      resizeStartWidth=rect.width;resizeStartHeight=rect.height;
+      resizeStartX=e.clientX;resizeStartY=e.clientY;
+      resizeHandle.setPointerCapture(e.pointerId);
+      window.addEventListener('pointermove',onResizeMove);
+      window.addEventListener('pointerup',onResizeUp);
+      window.addEventListener('pointercancel',onResizeUp);
+    });
+  }
+  function onResizeMove(e){
+    if(!resizing)return;
+    pitch.style.width=Math.max(300,resizeStartWidth+e.clientX-resizeStartX)+'px';
+    pitch.style.height=Math.max(400,resizeStartHeight+e.clientY-resizeStartY)+'px';
+  }
+  function onResizeUp(e){
+    if(!resizing)return;
+    resizing=false;
+    resizeHandle.releasePointerCapture(e.pointerId);
+    window.removeEventListener('pointermove',onResizeMove);
+    window.removeEventListener('pointerup',onResizeUp);
+    window.removeEventListener('pointercancel',onResizeUp);
+  }
+  function updatePlayers(){players.forEach(p=>p.el.remove());balls.forEach(b=>b.el.remove());traces.forEach(t=>t.remove());players=[];balls=[];traces=[];ballOwners.clear();}
+
+  // DRAG från toolbar
+  let draggingIcon=null, currentDragType=null;
+  function startIconDrag(e,type,iconEl){
+    e.preventDefault();e.stopPropagation();currentDragType=type;
+    draggingIcon=document.createElement('div');
+    draggingIcon.className='dragging-icon';
+    if(iconEl.querySelector('svg')){draggingIcon.innerHTML=iconEl.innerHTML;draggingIcon.style.fontSize='0';}
+    else draggingIcon.textContent=iconEl.textContent;
+    draggingIcon.style.left=e.clientX+'px';draggingIcon.style.top=e.clientY+'px';
+    document.body.appendChild(draggingIcon);
+    iconEl.style.opacity='0.3';
+    window.addEventListener('pointermove',onIconDragMove);
+    window.addEventListener('pointerup',onIconDragEnd);
+  }
+  function onIconDragMove(e){
+    if(!draggingIcon)return;
+    e.preventDefault();
+    draggingIcon.style.left=e.clientX+'px';
+    draggingIcon.style.top=e.clientY+'px';
+  }
+  function onIconDragEnd(e){
+    if(!draggingIcon)return;
+    e.preventDefault();
+    const pr=pitch.getBoundingClientRect(),x=e.clientX-pr.left,y=e.clientY-pr.top;
+    if(e.clientX>=pr.left&&e.clientX<=pr.right&&e.clientY>=pr.top&&e.clientY<=pr.bottom){
+      if(currentDragType==='player-left')createPlayer('L'+(++playerCounter),'left',x,y,playerCounter);
+      else if(currentDragType==='player-right')createPlayer('R'+(++playerCounter),'right',x,y,playerCounter);
+      else if(currentDragType==='cone')createCone('C'+(++coneCounter),x,y);
+      else if(currentDragType==='ball')createBall('B'+(balls.length+1),x,y);
+      else if(currentDragType==='goal-left')createGoal('GL'+(++goalCounter),'left',x,y);
+      else if(currentDragType==='goal-right')createGoal('GR'+(++goalCounter),'right',x,y);
     }
+    document.body.removeChild(draggingIcon);draggingIcon=null;currentDragType=null;
+    document.querySelectorAll('.toolbar-icon').forEach(i=>i.style.opacity='1');
+    window.removeEventListener('pointermove',onIconDragMove);
+    window.removeEventListener('pointerup',onIconDragEnd);
+  }
+  function setupIconDragDrop(){}
 
-    function clearRecordings() {
-      if (confirm('Vill du verkligen rensa alla inspelningar?')) {
-        recordings = [];
-        currentRecording = null;
-        recordMode = false;
-        recordBtn.classList.remove('active');
-        recordBtn.textContent = '🔴 Spela in';
-        renderRecList();
-      }
-    }
+  // SKAPA OBJEKT
+  function createPlayer(id,side,x,y,num){
+    const el=document.createElement('div');
+    el.className='player '+side;el.id=id;el.textContent=num;
+    el.style.left=(x-18)+'px';el.style.top=(y-18)+'px';
+    pitch.appendChild(el);
+    const p={id,side,x,y,num,el,clickCount:0,clickTimer:null};
+    players.push(p);
+    el.addEventListener('pointerdown',e=>onPointerDown(e,p,'player'));
+    el.addEventListener('click',e=>handleObjectClick(e,p,'player'));
+  }
+  function createBall(id,x,y){
+    const el=document.createElement('div');
+    el.className='ball';el.id=id;
+    el.style.left=(x-10)+'px';el.style.top=(y-10)+'px';
+    pitch.appendChild(el);
+    const b={id,x,y,el,clickCount:0,clickTimer:null};
+    balls.push(b);
+    el.addEventListener('pointerdown',e=>onPointerDown(e,b,'ball'));
+    el.addEventListener('click',e=>handleObjectClick(e,b,'ball'));
+  }
+  function createCone(id,x,y){
+    const el=document.createElement('div');
+    el.className='cone';el.id=id;
+    el.style.left=(x-12)+'px';el.style.top=(y-10)+'px';
+    pitch.appendChild(el);
+    const c={id,x,y,el,clickCount:0,clickTimer:null};
+    cones.push(c);
+    el.addEventListener('pointerdown',e=>onPointerDown(e,c,'cone'));
+    el.addEventListener('click',e=>handleObjectClick(e,c,'cone'));
+  }
+  function createGoal(id,side,x,y){
+    const el=document.createElement('div');
+    el.className='goal';el.id=id;
+    el.style.cssText='position:absolute;width:80px;height:22px;border:3px solid rgba(255,255,255,0.9);background:rgba(255,255,255,0.15);cursor:grab;z-index:100;';
+    el.style.left=(x-40)+'px';el.style.top=(y-11)+'px';
+    pitch.appendChild(el);
+    const g={id,side,x,y,el,rotation:0,clickCount:0,clickTimer:null};
+    goals.push(g);
+    el.addEventListener('pointerdown',e=>onPointerDown(e,g,'goal'));
+    el.addEventListener('click',e=>handleObjectClick(e,g,'goal'));
+  }
 
-    // ─── TA BORT OBJEKT (trippelklick) ───────────────────────────────────────
-
-    function handleObjectClick(e, obj, type) {
-      e.stopPropagation();
-      obj.clickCount++;
-      if (obj.clickTimer) clearTimeout(obj.clickTimer);
-      obj.clickTimer = setTimeout(() => {
-        if (obj.clickCount === 2 && type === 'goal') {
-          obj.rotation = (obj.rotation + 45) % 360;
-          obj.el.style.transform = `rotate(${obj.rotation}deg)`;
-        } else if (obj.clickCount >= 3) {
-          removeObject(obj, type);
+  // BOLLINTERAKTION
+  function checkBallOverlap(player){
+    for(const ball of balls){
+      const od=ballOwners.get(ball.id);
+      if(od&&od.playerId===player.id)continue;
+      const dx=ball.x-player.x,dy=ball.y-player.y;
+      if(Math.sqrt(dx*dx+dy*dy)<28){
+        ballOwners.set(ball.id,{playerId:player.id,lastX:player.x,lastY:player.y});
+        ball.el.classList.add('held');
+        if(recordMode&&currentRecording&&currentRecording.actorId===player.id){
+          if(currentRecording.heldBalls.length===0){
+            recordings.push(currentRecording);
+            const pr2=pitch.getBoundingClientRect(),now=performance.now();
+            currentRecording={
+              id:'REC'+(recordings.length+1),actorId:player.id,step:recordings.length+1,
+              startTime:now,frames:[],heldBalls:[ball.id],
+              startPos:{xRel:player.x/pr2.width,yRel:player.y/pr2.height}
+            };
+            currentRecording.frames.push({t:0,xRel:currentRecording.startPos.xRel,yRel:currentRecording.startPos.yRel});
+          }else if(!currentRecording.heldBalls.includes(ball.id))currentRecording.heldBalls.push(ball.id);
         }
-        obj.clickCount = 0;
-      }, 300);
-    }
-
-    // FIX: komplett removeObject
-    function removeObject(obj, type) {
-      obj.el.remove();
-      if (type === 'player') {
-        const i = players.indexOf(obj);
-        if (i > -1) players.splice(i, 1);
-        releaseBall(obj.id);
-      } else if (type === 'ball') {
-        const i = balls.indexOf(obj);
-        if (i > -1) balls.splice(i, 1);
-        ballOwners.delete(obj.id);
-      } else if (type === 'cone') {
-        const i = cones.indexOf(obj);
-        if (i > -1) cones.splice(i, 1);
-      } else if (type === 'goal') {
-        const i = goals.indexOf(obj);
-        if (i > -1) goals.splice(i, 1);
       }
     }
+  }
+  function releaseBall(playerId){
+    for(const[ballId,od]of ballOwners.entries()){
+      if(od.playerId===playerId){
+        ballOwners.delete(ballId);
+        const ball=balls.find(b=>b.id===ballId);
+        if(ball)ball.el.classList.remove('held');
+      }
+    }
+  }
+  function checkBallInGoal(ball){
+    const pr=pitch.getBoundingClientRect();
+    for(const id of['goalLeft','goalRight']){
+      const el=document.getElementById(id);
+      if(!el||!showGoals)continue;
+      const gr=el.getBoundingClientRect(),gx=gr.left-pr.left+gr.width/2,gy=gr.top-pr.top+gr.height/2;
+      if(Math.abs(ball.x-gx)<gr.width/2&&Math.abs(ball.y-gy)<gr.height/2){
+        el.style.boxShadow='0 0 14px 5px #ffeb3b';
+        setTimeout(()=>el.style.boxShadow='',700);
+      }
+    }
+    for(const goal of goals){
+      const gr=goal.el.getBoundingClientRect(),gx=gr.left-pr.left+gr.width/2,gy=gr.top-pr.top+gr.height/2;
+      if(Math.abs(ball.x-gx)<gr.width/2+5&&Math.abs(ball.y-gy)<gr.height/2+5){
+        goal.el.style.boxShadow='0 0 14px 5px #ffeb3b';
+        setTimeout(()=>goal.el.style.boxShadow='',700);
+      }
+    }
+  }
 
-    // ─── STARTA ──────────────────────────────────────────────────────────────
-    init();
-  </script>
+  // POINTER
+  function onPointerDown(e,obj,type){
+    e.preventDefault();e.stopPropagation();
+    const el=obj.el,rect=el.getBoundingClientRect(),pr=pitch.getBoundingClientRect();
+    const radius=type==='ball'?10:type==='cone'?12:type==='goal'?40:18;
+    el.setPointerCapture(e.pointerId);
+    dragInfo={obj,type,el,offsetX:e.clientX-rect.left-radius,offsetY:e.clientY-rect.top-radius,pitchRect:pr};
+    if(recordMode){
+      const p2=pitch.getBoundingClientRect();
+      currentRecording={
+        id:'REC'+(recordings.length+1),actorId:obj.id,step:recordings.length+1,
+        startTime:performance.now(),frames:[],heldBalls:[],
+        startPos:{xRel:obj.x/p2.width,yRel:obj.y/p2.height}
+      };
+      currentRecording.frames.push({t:0,xRel:currentRecording.startPos.xRel,yRel:currentRecording.startPos.yRel});
+    }
+    window.addEventListener('pointermove',onPointerMove);
+    window.addEventListener('pointerup',onPointerUp);
+  }
+  function onPointerMove(e){
+    if(!dragInfo)return;
+    const{obj,type,el,offsetX,offsetY,pitchRect}=dragInfo;
+    const radius=type==='ball'?10:type==='cone'?8:type==='goal'?40:18;
+    let x=e.clientX-pitchRect.left-offsetX,y=e.clientY-pitchRect.top-offsetY;
+    if(type!=='ball'){
+      x=Math.max(radius,Math.min(pitchRect.width-radius,x));
+      y=Math.max(radius,Math.min(pitchRect.height-radius,y));
+    }else{
+      x=Math.max(radius-100,Math.min(pitchRect.width-radius+100,x));
+      y=Math.max(radius-100,Math.min(pitchRect.height-radius+100,y));
+    }
+    el.style.left=(x-radius)+'px';el.style.top=(y-radius)+'px';
+    obj.x=x;obj.y=y;
+    if(type==='ball')checkBallInGoal(obj);
+    if(type==='player'){
+      checkBallOverlap(obj);
+      for(const ball of balls){
+        const od=ballOwners.get(ball.id);
+        if(od&&od.playerId===obj.id){
+          const angle=Math.atan2(y-od.lastY,x-od.lastX);
+          ball.x=x+Math.cos(angle)*25;
+          ball.y=y+Math.sin(angle)*25;
+          ball.el.style.left=(ball.x-10)+'px';
+          ball.el.style.top=(ball.y-10)+'px';
+          od.lastX=x;od.lastY=y;
+        }
+      }
+    }
+    if(currentRecording&&currentRecording.actorId===obj.id){
+      const t=(performance.now()-currentRecording.startTime)/1000;
+      currentRecording.frames.push({t,xRel:x/pitchRect.width,yRel:y/pitchRect.height});
+    }
+    if(type==='ball'&&spacePressed){
+      if(!ballTraceActive||ballTraceActive.ball!==obj)ballTraceActive={ball:obj,points:[]};
+      ballTraceActive.points.push({x,y});drawTrace(ballTraceActive);
+    }
+  }
+  function onPointerUp(e){
+    if(!dragInfo)return;
+    const{el,obj,type}=dragInfo;
+    el.releasePointerCapture(e.pointerId);
+    if(type==='player')releaseBall(obj.id);
+    if(currentRecording&&currentRecording.actorId===obj.id){
+      recordings.push(currentRecording);
+      currentRecording=null;
+      renderRecList();buildPlaybackSteps();
+    }
+    dragInfo=null;
+    window.removeEventListener('pointermove',onPointerMove);
+    window.removeEventListener('pointerup',onPointerUp);
+  }
+
+  // SPÅRNING
+  function drawTrace(traceData){
+    const points=traceData.points;if(points.length<2)return;
+    let svg=traces.find(t=>t.dataset.ball===traceData.ball.id);
+    if(!svg){
+      svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.classList.add('trace');svg.dataset.ball=traceData.ball.id;
+      svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;';
+      pitch.appendChild(svg);traces.push(svg);
+    }
+    svg.innerHTML='';
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    let d='M '+points[0].x+' '+points[0].y;
+    for(let i=1;i<points.length;i++)d+=' L '+points[i].x+' '+points[i].y;
+    path.setAttribute('d',d);
+    path.setAttribute('stroke','#ffeb3b');
+    path.setAttribute('stroke-width','3');
+    path.setAttribute('fill','none');
+    svg.appendChild(path);
+  }
+
+  // PLAN & LINJER
+  function setGoalVisibility(show){showGoals=show;pitch.querySelectorAll('.goal').forEach(g=>g.style.display=show?'block':'none');}
+  function resetPositions(){updatePlayers();cones.forEach(c=>c.el.remove());cones=[];coneCounter=0;goals.forEach(g=>g.el.remove());goals=[];goalCounter=0;traces.forEach(t=>t.remove());traces=[];ballTraceActive=null;ballOwners.clear();}
+  function toggleLine(id){
+    const el=document.getElementById(id);
+    const cb=document.getElementById('show'+id.charAt(0).toUpperCase()+id.slice(1));
+    if(el)el.style.display=cb&&cb.checked?'block':'none';
+  }
+  function togglePenaltyBoxes(){const show=document.getElementById('showPenaltyBoxes').checked;document.getElementById('penaltyLeft').style.display=show?'block':'none';document.getElementById('penaltyRight').style.display=show?'block':'none';}
+  function toggleGoalAreas(){const show=document.getElementById('showGoalAreas').checked;document.getElementById('goalAreaLeft').style.display=show?'block':'none';document.getElementById('goalAreaRight').style.display=show?'block':'none';}
+  function updateCircleSize(size){const c=document.getElementById('centerCircle');if(c){c.style.width=size+'px';c.style.height=size+'px';}}
+
+  // INSPELNING
+  function toggleRecord(){
+    recordMode=!recordMode;
+    recordBtn.classList.toggle('active',recordMode);
+    recordMode ? recordBtn.textContent='⏺ Spelar...' : recordBtn.textContent='🔴 REC';
+    if(recordMode){
+      const pr=pitch.getBoundingClientRect();
+      if(!recordings.find(r=>r.id==='REC1')){
+        const rec1={id:'REC1',actorId:'ALL',step:1,frames:[],snapshot:[]};
+        [...players,...balls,...cones,...goals].forEach(obj=>rec1.snapshot.push({id:obj.id,xRel:obj.x/pr.width,yRel:obj.y/pr.height}));
+        recordings.unshift(rec1);renderRecList();
+      }
+    }else if(currentRecording){
+      recordings.push(currentRecording);
+      currentRecording=null;renderRecList();buildPlaybackSteps();
+    }
+  }
+  function renderRecList(activeRecIds){
+    recList.innerHTML='';
+    if(!recordings.length){
+      recList.innerHTML='<p style="color:#777;font-size:0.78rem;padding:4px;">Inga inspelningar</p>';return;
+    }
+    recordings.forEach((rec,index)=>{
+      const row=document.createElement('div');row.className='rec-row';row.dataset.recId=rec.id;
+      if(activeRecIds&&activeRecIds.has(rec.id))row.classList.add('playing');
+      const label=document.createElement('span');label.textContent=rec.id+' ('+rec.actorId+')';label.title=label.textContent;
+      const input=document.createElement('input');input.type='number';input.min='1';input.value=rec.step;
+      input.addEventListener('change',()=>{const v=parseInt(input.value,10);rec.step=isNaN(v)||v<1?1:v;input.value=rec.step;buildPlaybackSteps();});
+      const delBtn=document.createElement('button');delBtn.textContent='×';delBtn.className='danger';
+      delBtn.addEventListener('click',()=>{recordings.splice(index,1);renderRecList();buildPlaybackSteps();});
+      row.appendChild(label);row.appendChild(input);row.appendChild(delBtn);recList.appendChild(row);
+    });
+  }
+
+  // UPPSPELNING LOOP
+  function stopPlayback(){isPlaying=false;isPaused=false;if(playbackRequestId)cancelAnimationFrame(playbackRequestId);panelPlayBtn.textContent='▶';panelPlayBtn.classList.remove('paused');document.querySelectorAll('.rec-row').forEach(r=>r.classList.remove('playing'));}
+  function playbackLoop(){
+    if(!isPlaying||!playbackSteps.length)return;
+    const tRaw=(performance.now()-playbackStartWall)/1000+playbackPauseOffset;
+    const tWrapped=playbackTotalDur>0?tRaw%playbackTotalDur:0;
+    applyFrameAtTime(tWrapped);updateTransportUI(tWrapped);
+    playbackRequestId=requestAnimationFrame(playbackLoop);
+  }
+  function restoreFromREC1(){
+    const rec1=recordings.find(r=>r.id==='REC1');
+    if(!rec1){alert('Ingen startsnapshot hittad.');return;}
+    if(!rec1.snapshot||!rec1.snapshot.length){alert('REC1 saknar snapshot.');return;}
+    const pr=pitch.getBoundingClientRect();
+    rec1.snapshot.forEach(snap=>{
+      const obj=[...players,...balls,...cones,...goals].find(o=>o.id===snap.id);if(!obj)return;
+      const x=snap.xRel*pr.width,y=snap.yRel*pr.height;
+      const r=obj.el.classList.contains('ball')?10:obj.el.classList.contains('cone')?8:obj.el.classList.contains('goal')?40:18;
+      obj.x=x;obj.y=y;obj.el.style.left=(x-r)+'px';obj.el.style.top=(y-r)+'px';
+    });
+    ballOwners.clear();balls.forEach(b=>b.el.classList.remove('held'));
+  }
+  function clearRecordings(){
+    if(confirm('Rensa alla inspelningar?')){
+      recordings=[];currentRecording=null;recordMode=false;
+      recordBtn.classList.remove('active');recordBtn.textContent='🔴 REC';
+      stopPlayback();playbackSteps=[];playbackTotalDur=0;
+      renderRecList();stepLabel.textContent='–';stepTotal.textContent='–';timeLabel.textContent='0.0s';scrubber.value=0;
+    }
+  }
+  function handleObjectClick(e,obj,type){
+    e.stopPropagation();
+    obj.clickCount=(obj.clickCount||0)+1;
+    if(obj.clickTimer)clearTimeout(obj.clickTimer);
+    obj.clickTimer=setTimeout(()=>{
+      if(obj.clickCount===2&&type==='goal'){obj.rotation=(obj.rotation+45)%360;obj.el.style.transform='rotate('+obj.rotation+'deg)';}
+      else if(obj.clickCount>=3)removeObject(obj,type);
+      obj.clickCount=0;
+    },300);
+  }
+  function removeObject(obj,type){
+    obj.el.remove();
+    if(type==='player'){const i=players.indexOf(obj);if(i>-1)players.splice(i,1);releaseBall(obj.id);}
+    else if(type==='ball'){const i=balls.indexOf(obj);if(i>-1)balls.splice(i,1);ballOwners.delete(obj.id);}
+    else if(type==='cone'){const i=cones.indexOf(obj);if(i>-1)cones.splice(i,1);}
+    else if(type==='goal'){const i=goals.indexOf(obj);if(i>-1)goals.splice(i,1);}
+  }
+
+  init();
+</script>
 </body>
 </html>
