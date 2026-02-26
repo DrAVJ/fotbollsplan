@@ -709,23 +709,124 @@
   function exportDrawLoop(){
     if(!exportActive)return;
     const pr=pitch.getBoundingClientRect(),cw=exportCanvas.width,ch=exportCanvas.height,ctx=exportCtx;
-    const grad=ctx.createLinearGradient(0,0,0,ch);grad.addColorStop(0,'#2d5f3f');grad.addColorStop(1,'#1f4d2f');
-    ctx.fillStyle=grad;ctx.fillRect(0,0,cw,ch);ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=3;ctx.strokeRect(1.5,1.5,cw-3,ch-3);
+
+    // Bakgrund
+    const grad=ctx.createLinearGradient(0,0,0,ch);
+    grad.addColorStop(0,'#2d5f3f');grad.addColorStop(1,'#1f4d2f');
+    ctx.fillStyle=grad;ctx.fillRect(0,0,cw,ch);
+    ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=3;ctx.strokeRect(1.5,1.5,cw-3,ch-3);
+
     const lc='rgba(255,255,255,0.8)';
-    if(document.getElementById('showMidline').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,ch/2);ctx.lineTo(cw,ch/2);ctx.stroke();}
-    if(document.getElementById('showCenterCircle').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;ctx.beginPath();ctx.arc(cw/2,ch/2,cw*0.11,0,Math.PI*2);ctx.stroke();}
-    if(document.getElementById('showCenterSpot').checked){ctx.fillStyle=lc;ctx.beginPath();ctx.arc(cw/2,ch/2,3,0,Math.PI*2);ctx.fill();}
-    if(document.getElementById('showPenaltyBoxes').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;const pw=cw*0.4,ph=ch*0.15;ctx.strokeRect((cw-pw)/2,0,pw,ph);ctx.strokeRect((cw-pw)/2,ch-ph,pw,ph);}
-    if(document.getElementById('showGoalAreas').checked){ctx.strokeStyle=lc;ctx.lineWidth=2;const gaw=cw*0.22,gah=ch*0.08;ctx.strokeRect((cw-gaw)/2,0,gaw,gah);ctx.strokeRect((cw-gaw)/2,ch-gah,gaw,gah);}
-    if(showGoals){drawFixedGoal(ctx,cw,ch,'top');drawFixedGoal(ctx,cw,ch,'bottom');}
-    for(const cone of cones){ctx.beginPath();ctx.moveTo(cone.x,cone.y-9);ctx.lineTo(cone.x-10,cone.y+9);ctx.lineTo(cone.x+10,cone.y+9);ctx.closePath();ctx.fillStyle='#ffd700';ctx.fill();}
-    for(const ball of balls){const rg=ctx.createRadialGradient(ball.x-2,ball.y-2,1,ball.x,ball.y,9);rg.addColorStop(0,'#fff');rg.addColorStop(0.5,'#f0f0f0');rg.addColorStop(1,'#d0d0d0');ctx.beginPath();ctx.arc(ball.x,ball.y,9,0,Math.PI*2);ctx.fillStyle=rg;ctx.fill();ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();}
-    for(const p of players){const isLeft=p.side==='left';const rg=ctx.createLinearGradient(p.x-16,p.y-16,p.x+16,p.y+16);if(isLeft){rg.addColorStop(0,'#3498db');rg.addColorStop(1,'#2980b9');}else{rg.addColorStop(0,'#e74c3c');rg.addColorStop(1,'#c0392b');}ctx.beginPath();ctx.arc(p.x,p.y,16,0,Math.PI*2);ctx.fillStyle=rg;ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(p.num),p.x,p.y);}
-    const pct=Math.min(100,playbackTotalDur>0?(performance.now()-playbackStartWall)/1000/playbackTotalDur*100:0);
-    document.getElementById('exportProgressBar').style.width=pct+'%';
-    document.getElementById('exportStatus').textContent='Spelar in... '+((performance.now()-exportStartTime)/1000).toFixed(1)+'s';
+
+    // Mittlinje
+    if(document.getElementById('showMidline').checked){
+      ctx.strokeStyle=lc;ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(0,ch/2);ctx.lineTo(cw,ch/2);ctx.stroke();
+    }
+    // Mittcirkel
+    if(document.getElementById('showCenterCircle').checked){
+      ctx.strokeStyle=lc;ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(cw/2,ch/2,cw*0.11,0,Math.PI*2);ctx.stroke();
+    }
+    // Mittpunkt
+    if(document.getElementById('showCenterSpot').checked){
+      ctx.fillStyle=lc;ctx.beginPath();ctx.arc(cw/2,ch/2,3,0,Math.PI*2);ctx.fill();
+    }
+    // Straffområden
+    if(document.getElementById('showPenaltyBoxes').checked){
+      ctx.strokeStyle=lc;ctx.lineWidth=2;
+      const pw=cw*0.4,ph=ch*0.15;
+      ctx.strokeRect((cw-pw)/2,0,pw,ph);
+      ctx.strokeRect((cw-pw)/2,ch-ph,pw,ph);
+    }
+    // Målområden
+    if(document.getElementById('showGoalAreas').checked){
+      ctx.strokeStyle=lc;ctx.lineWidth=2;
+      const gaw=cw*0.22,gah=ch*0.08;
+      ctx.strokeRect((cw-gaw)/2,0,gaw,gah);
+      ctx.strokeRect((cw-gaw)/2,ch-gah,gaw,gah);
+    }
+
+    // ── FASTA MÅLBURAR (top/bottom) ──────────────────────────────────
+    if(showGoals){
+      const gw=cw*0.12,gh=ch*0.035;
+      ctx.strokeStyle='#ffffff';ctx.lineWidth=3;
+      ctx.fillStyle='rgba(255,255,255,0.18)';
+      // Top-mål (ovanför planen, dvs vid y=0)
+      ctx.beginPath();
+      ctx.rect((cw-gw)/2,-gh,gw,gh);
+      ctx.fill();ctx.stroke();
+      // Bottom-mål
+      ctx.beginPath();
+      ctx.rect((cw-gw)/2,ch,gw,gh);
+      ctx.fill();ctx.stroke();
+    }
+
+    // ── DYNAMISKA MÅLBURAR (goals[]) ─────────────────────────────────
+    if(showGoals){
+      for(const goal of goals){
+        const gr=goal.el.getBoundingClientRect();
+        const gx=gr.left-pr.left, gy=gr.top-pr.top;
+        const gw=gr.width, gh=gr.height;
+        ctx.save();
+        ctx.translate(gx+gw/2,gy+gh/2);
+        ctx.rotate((goal.rotation||0)*Math.PI/180);
+        ctx.strokeStyle='rgba(255,255,255,0.9)';ctx.lineWidth=3;
+        ctx.fillStyle='rgba(255,255,255,0.15)';
+        ctx.beginPath();
+        ctx.rect(-gw/2,-gh/2,gw,gh);
+        ctx.fill();ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // ── KONER ────────────────────────────────────────────────────────
+    for(const cone of cones){
+      ctx.save();
+      ctx.translate(cone.x,cone.y);
+      ctx.fillStyle='#ffd700';
+      ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(-10,9);ctx.lineTo(10,9);ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ── BOLLAR ───────────────────────────────────────────────────────
+    for(const ball of balls){
+      ctx.save();
+      const r=9;
+      const bGrad=ctx.createRadialGradient(ball.x-3,ball.y-3,1,ball.x,ball.y,r);
+      bGrad.addColorStop(0,'#ffffff');bGrad.addColorStop(0.5,'#f0f0f0');bGrad.addColorStop(1,'#d0d0d0');
+      ctx.fillStyle=bGrad;
+      ctx.beginPath();ctx.arc(ball.x,ball.y,r,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.stroke();
+      ctx.restore();
+    }
+
+    // ── SPELARE ──────────────────────────────────────────────────────
+    for(const player of players){
+      ctx.save();
+      const r=16;
+      const pGrad=ctx.createLinearGradient(player.x-r,player.y-r,player.x+r,player.y+r);
+      if(player.side==='left'){pGrad.addColorStop(0,'#3498db');pGrad.addColorStop(1,'#2980b9');}
+      else{pGrad.addColorStop(0,'#e74c3c');pGrad.addColorStop(1,'#c0392b');}
+      ctx.fillStyle=pGrad;
+      ctx.beginPath();ctx.arc(player.x,player.y,r,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=2;ctx.stroke();
+      ctx.fillStyle='#fff';ctx.font='bold 13px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(player.num,player.x,player.y);
+      ctx.restore();
+    }
+
+    // ── PROGRESSBAR ──────────────────────────────────────────────────
+    if(playbackTotalDur>0){
+      const elapsed=(performance.now()-exportStartTime)/1000;
+      const pct=Math.min(100,(elapsed/playbackTotalDur)*100);
+      document.getElementById('exportProgressBar').style.width=pct+'%';
+    }
+
     exportRAF=requestAnimationFrame(exportDrawLoop);
   }
+
   function drawFixedGoal(ctx,cw,ch,pos){const gw=cw*0.12,gh=ch*0.035,gx=(cw-gw)/2,gy=pos==='top'?-gh:ch;ctx.fillStyle='rgba(255,255,255,0.1)';ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.fillRect(gx,gy,gw,gh);ctx.strokeRect(gx,gy,gw,gh);}
   function stopExportRecord(){exportActive=false;if(exportRAF)cancelAnimationFrame(exportRAF);stopPlayback();if(exportRecorder&&exportRecorder.state!=='inactive')exportRecorder.stop();exportBtn.textContent='🎬';exportBtn.classList.remove('recording');document.getElementById('exportOverlay').classList.remove('active');}
   function finalizeExport(){const blob=new Blob(exportChunks,{type:'video/webm'}),url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='taktik_'+Date.now()+'.webm';a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);}
