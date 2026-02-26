@@ -193,8 +193,6 @@
   let playerCounter=0,coneCounter=0,goalCounter=0;
   let dragInfo=null,spacePressed=false,ballTraceActive=null;
   let ballOwners=new Map();
-
-  // ── INSPELNING: exakt samma logik som fungerande version ─────────────
   let recordings=[], currentRecording=null, recordMode=false;
 
   let isPlaying=false,isPaused=false,playbackRequestId=null;
@@ -207,12 +205,11 @@
   function initPitchSize(){
     const vw=window.innerWidth-16;
     const vh=window.innerHeight-160;
-    const initW=Math.min(vw,400);
-    const initH=Math.min(Math.round(initW*1.2), vh);
+    const initW=Math.min(vw,500);
+    const initH=Math.min(Math.round(initW*1.4),vh);
     pitchWrapper.style.width=initW+'px';
     pitchWrapper.style.height=initH+'px';
   }
-
 
   // ── RESIZE ───────────────────────────────────────────────────────────
   function setupResize(){
@@ -246,7 +243,7 @@
     if(recCol.classList.contains('open')){buildPlaybackSteps();renderRecList();}
   }
 
-  // ── POINTER ── (exakt från fungerande version) ────────────────────────
+  // ── POINTER ───────────────────────────────────────────────────────────
   function onPointerDown(e,obj,type){
     e.preventDefault();e.stopPropagation();
     const el=obj.el,rect=el.getBoundingClientRect(),pr=pitch.getBoundingClientRect();
@@ -289,7 +286,6 @@
 
     if(type==='player'){
       checkBallOverlap(obj);
-      // Move held balls (position-only during drag, angle-based during playback)
       for(const ball of balls){
         const od=ballOwners.get(ball.id);
         if(od&&od.playerId===obj.id){
@@ -330,7 +326,7 @@
     window.removeEventListener('pointerup',onPointerUp);
   }
 
-  // ── BALL ── (exakt från fungerande version) ───────────────────────────
+  // ── BALL ──────────────────────────────────────────────────────────────
   function checkBallOverlap(player){
     for(const ball of balls){
       const od=ballOwners.get(ball.id);
@@ -339,10 +335,8 @@
       if(Math.sqrt(dx*dx+dy*dy)<26){
         ballOwners.set(ball.id,{playerId:player.id,lastX:player.x,lastY:player.y});
         ball.el.classList.add('held');
-        // När spelaren plockar upp bollen: spara nuvarande REC, starta ny med heldBalls
         if(recordMode&&currentRecording&&currentRecording.actorId===player.id){
           if(currentRecording.heldBalls.length===0){
-            // Spara rörelsen INNAN bollplockning
             recordings.push(currentRecording);
             const pr2=pitch.getBoundingClientRect(), now=performance.now();
             currentRecording={
@@ -435,7 +429,7 @@
     document.querySelectorAll('.rec-row').forEach(r=>r.classList.remove('playing'));
   }
 
-  // ── PLAYBACK ── (exakt från fungerande version) ───────────────────────
+  // ── PLAYBACK ──────────────────────────────────────────────────────────
   function buildPlaybackSteps(){
     if(!recordings.length)return;
     const byStep=new Map();
@@ -478,7 +472,6 @@
       if(obj){
         const r=obj.el.classList.contains('ball')?9:obj.el.classList.contains('cone')?9:16;
         obj.el.style.left=(x-r)+'px';obj.el.style.top=(y-r)+'px';obj.x=x;obj.y=y;
-        // Boll som spelare bär: placeras med vinkel framför spelaren
         if(rec.heldBalls&&rec.heldBalls.length){
           const px=i>0?rec.frames[i-1].xRel*pr.width:x;
           const py=i>0?rec.frames[i-1].yRel*pr.height:y;
@@ -528,10 +521,41 @@
         [...players,...balls,...cones,...goals].forEach(obj=>rec1.snapshot.push({id:obj.id,xRel:obj.x/pr.width,yRel:obj.y/pr.height}));
         recordings.unshift(rec1);renderRecList();
       }
-    }else if(currentRecording){
-      recordings.push(currentRecording);currentRecording=null;renderRecList();buildPlaybackSteps();
+    }else{
+      if(currentRecording){recordings.push(currentRecording);currentRecording=null;}
+      addResetRec();
+      renderRecList();buildPlaybackSteps();
     }
   }
+
+  // Skapar automatisk återgångs-REC som sista steg
+  function addResetRec(){
+    const rec1=recordings.find(r=>r.id==='REC1');
+    if(!rec1||!rec1.snapshot||!rec1.snapshot.length) return;
+    // Ta bort eventuell tidigare reset-REC
+    for(let i=recordings.length-1;i>=0;i--){
+      if(recordings[i].id.startsWith('REC_RESET')) recordings.splice(i,1);
+    }
+    const pr=pitch.getBoundingClientRect();
+    const maxStep=Math.max(...recordings.filter(r=>r.step).map(r=>r.step));
+    const resetStep=maxStep+1;
+    const DURATION=1.2; // sekunder för glid tillbaka
+    for(const snap of rec1.snapshot){
+      const obj=[...players,...balls,...cones,...goals].find(o=>o.id===snap.id);
+      if(!obj) continue;
+      recordings.push({
+        id:'REC_RESET_'+obj.id,
+        actorId:obj.id,
+        step:resetStep,
+        frames:[
+          {t:0,       xRel:obj.x/pr.width,  yRel:obj.y/pr.height},
+          {t:DURATION, xRel:snap.xRel,       yRel:snap.yRel}
+        ],
+        heldBalls:[]
+      });
+    }
+  }
+
   function renderRecList(){
     recList.innerHTML='';
     if(!recordings.length){recList.innerHTML='<p style="color:#777;font-size:0.76rem;padding:4px;">Inga inspelningar</p>';return;}
@@ -545,6 +569,7 @@
       row.appendChild(label);row.appendChild(input);row.appendChild(delBtn);recList.appendChild(row);
     });
   }
+
   function restoreFromREC1(){
     const rec1=recordings.find(r=>r.id==='REC1');
     if(!rec1||!rec1.snapshot||!rec1.snapshot.length){alert('Ingen startsnapshot.');return;}
@@ -557,6 +582,7 @@
     });
     ballOwners.clear();balls.forEach(b=>b.el.classList.remove('held'));
   }
+
   function clearRecordings(){
     if(confirm('Rensa alla inspelningar?')){
       recordings=[];currentRecording=null;recordMode=false;
@@ -650,7 +676,6 @@
   function togglePenaltyBoxes(){const show=document.getElementById('showPenaltyBoxes').checked;['penaltyTop','penaltyBottom'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=show?'block':'none';});}
   function toggleGoalAreas(){const show=document.getElementById('showGoalAreas').checked;['goalAreaTop','goalAreaBottom'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=show?'block':'none';});}
 
-  // ── OBJECT CLICK (dubbel=rotera mål, trippel=ta bort) ─────────────────
   function handleObjectClick(e,obj,type){
     e.stopPropagation();obj.clickCount=(obj.clickCount||0)+1;
     if(obj.clickTimer)clearTimeout(obj.clickTimer);
